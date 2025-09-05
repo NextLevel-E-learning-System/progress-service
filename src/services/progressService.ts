@@ -4,7 +4,7 @@ import { z } from 'zod';
 type CreateInscricaoInput = z.infer<typeof createInscricaoSchema>;
 import { HttpError } from '../utils/httpError.js';
 import { publishEvent } from '../events/publisher.js';
-import { ModuleCompletedPayload, CourseCompletedPayload } from '../events/contracts.js';
+import { ModuleCompletedPayload, CourseCompletedPayload, CertificateIssuedPayload } from '../events/contracts.js';
 import { issueCertificate } from '../repositories/certificateRepository.js'; // permanece
 export async function createInscricao(d:CreateInscricaoInput){ await insertInscricao(d); return { id:d.id }; }
 export async function getInscricao(id:string){ const i = await findInscricao(id); if(!i) throw new HttpError(404,'nao_encontrado'); return i; }
@@ -43,5 +43,16 @@ async function emitCourseCompleted(r: CompleteResult){
 	};
 	await publishEvent({ type: 'course.completed.v1', source: 'progress-service', payload });
 	// Emissão automática de certificado (ignora erro para não quebrar fluxo principal)
-	try { await issueCertificate(r.inscricao_id, r.funcionario_id, r.curso_id); } catch(e){ /* log futuro */ }
+	try {
+		const cert = await issueCertificate(r.inscricao_id, r.funcionario_id, r.curso_id);
+		const certEvt: CertificateIssuedPayload = {
+			courseId: r.curso_id,
+			userId: r.funcionario_id,
+			certificateCode: cert.codigo_certificado,
+			issuedAt: (cert.data_emissao instanceof Date ? cert.data_emissao : new Date(cert.data_emissao)).toISOString(),
+			storageKey: cert.storage_key || cert.url_pdf,
+			verificationHashFragment: cert.hash_validacao.slice(0,16)
+		};
+		await publishEvent({ type: 'certificate.issued.v1', source: 'progress-service', payload: certEvt });
+	} catch(e){ /* log futuro */ }
 }

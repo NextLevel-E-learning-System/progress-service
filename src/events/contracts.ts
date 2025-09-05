@@ -24,3 +24,12 @@ export interface CourseCompletedPayload {
   userId: string;
   totalProgress: number;
 }
+
+export interface CertificateIssuedPayload {
+  courseId: string;
+  userId: string;
+  certificateCode: string;
+  issuedAt: string;
+  storageKey?: string | null;
+  verificationHashFragment: string; // parte inicial do hash para auditoria sem expor tudo
+}

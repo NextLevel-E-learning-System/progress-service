@@ -38,5 +38,10 @@
         }
       }
     }
+  ,
+  "/progress/v1/certificates/user/{userId}": { "get": { "summary": "Listar certificados do usuário (placeholder)", "tags": ["certificates"], "parameters": [{ "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }], "responses": { "200": { "description": "OK" } } } },
+  "/progress/v1/certificates/enrollment/{enrollmentId}": { "post": { "summary": "Emitir certificado (placeholder)", "tags": ["certificates"], "parameters": [{ "name": "enrollmentId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }], "responses": { "201": { "description": "Criado" } } } },
+  "/progress/v1/tracks": { "get": { "summary": "Listar trilhas (placeholder)", "tags": ["tracks"], "responses": { "200": { "description": "OK" } } } },
+  "/progress/v1/tracks/user/{userId}": { "get": { "summary": "Progresso em trilhas do usuário (placeholder)", "tags": ["tracks"], "parameters": [{ "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }], "responses": { "200": { "description": "OK" } } } }
   }
 }

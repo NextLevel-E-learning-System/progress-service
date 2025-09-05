@@ -36,3 +36,9 @@ export async function completeModuleDb(inscricaoId:string, moduloId:string): Pro
 		return { inscricao_id: inscricaoId, modulo_id: moduloId, progresso_percentual: progresso, concluido: progresso===100, data_conclusao: dataConclusao, funcionario_id: userId, curso_id: cursoId };
 	});
 }
+export async function listInscricoesByUser(userId:string){
+	return withClient(async c=>{
+		const r = await c.query('select id, funcionario_id, curso_id, status, progresso_percentual, data_inicio, data_conclusao from progress_service.inscricoes where funcionario_id=$1 order by data_inicio desc',[userId]);
+		return r.rows;
+	});
+}

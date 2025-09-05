@@ -1,4 +1,4 @@
-import { insertInscricao, findInscricao, updateProgresso, completeModuleDb, CompleteResult } from '../repositories/progressRepository.js';
+import { insertInscricao, findInscricao, updateProgresso, completeModuleDb, CompleteResult, listInscricoesByUser } from '../repositories/progressRepository.js';
 import { createInscricaoSchema } from '../validation/progressSchemas.js';
 import { z } from 'zod';
 type CreateInscricaoInput = z.infer<typeof createInscricaoSchema>;
@@ -14,6 +14,9 @@ export async function completeModule(inscricaoId:string, moduloId:string){
 	await emitModuleCompleted(r);
 	if (r.concluido) await emitCourseCompleted(r);
 	return r;
+}
+export async function listInscricoesUsuario(userId:string){
+	return listInscricoesByUser(userId);
 }
 
 async function emitModuleCompleted(r: CompleteResult){

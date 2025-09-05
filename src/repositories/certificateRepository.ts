@@ -1,3 +1,63 @@
-export interface Certificate { id:string; enrollment_id:string; user_id:string; course_id:string; issued_at:Date; verification_code:string }
-export async function listCertificatesByUser(_userId:string): Promise<Certificate[]> { return []; }
-export async function issueCertificatePlaceholder(enrollmentId:string): Promise<Certificate> { return { id: 'placeholder', enrollment_id: enrollmentId, user_id: 'u', course_id: 'c', issued_at: new Date(), verification_code: 'VERIFY123' }; }
+import { createHash, randomBytes } from 'crypto';
+import { withClient } from '../db.js';
+
+// Adapta ao schema existente: progress_service.certificados
+// colunas: id, funcionario_id, curso_id, codigo_certificado, data_emissao, hash_validacao, url_pdf
+export interface Certificate {
+	id: string;
+	funcionario_id: string;
+	curso_id: string;
+	codigo_certificado: string;
+	data_emissao: Date;
+	hash_validacao: string;
+	url_pdf: string | null;
+}
+
+export async function listCertificatesByUser(userId: string): Promise<Certificate[]> {
+	return withClient(async c => {
+		const r = await c.query(`select id, funcionario_id, curso_id, codigo_certificado, data_emissao, hash_validacao, url_pdf
+															from progress_service.certificados
+															where funcionario_id=$1
+															order by data_emissao desc`, [userId]);
+		return r.rows;
+	});
+}
+
+export async function findCertificateByUserCourse(userId:string, courseId:string){
+	return withClient(async c=>{
+		const r = await c.query(`select id, funcionario_id, curso_id, codigo_certificado, data_emissao, hash_validacao, url_pdf
+															from progress_service.certificados
+															where funcionario_id=$1 and curso_id=$2
+															order by data_emissao desc limit 1`,[userId, courseId]);
+		return r.rows[0] || null;
+	});
+}
+
+export async function issueCertificate(_enrollmentId:string, userId:string, courseId:string): Promise<Certificate> {
+	return withClient(async c=>{
+		const existing = await c.query(`select id, funcionario_id, curso_id, codigo_certificado, data_emissao, hash_validacao, url_pdf
+																		 from progress_service.certificados
+																		 where funcionario_id=$1 and curso_id=$2
+																		 order by data_emissao desc limit 1`,[userId, courseId]);
+		if(existing.rows[0]) return existing.rows[0];
+		const codigo = generateCode();
+		const hash_validacao = generateHash(codigo, userId, courseId);
+		const r = await c.query(`insert into progress_service.certificados
+				(id, funcionario_id, curso_id, codigo_certificado, data_emissao, hash_validacao, url_pdf)
+				values (gen_random_uuid(), $1,$2,$3, now(), $4, null)
+				returning id, funcionario_id, curso_id, codigo_certificado, data_emissao, hash_validacao, url_pdf`,[userId, courseId, codigo, hash_validacao]);
+		return r.rows[0];
+	});
+}
+
+function generateCode(){
+	const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+	let out='';
+	for(let i=0;i<12;i++) out += alphabet[Math.floor(Math.random()*alphabet.length)];
+	return out;
+}
+
+function generateHash(code:string, userId:string, courseId:string){
+	const salt = randomBytes(8).toString('hex');
+	return createHash('sha256').update(code+':'+userId+':'+courseId+':'+salt).digest('hex');
+}

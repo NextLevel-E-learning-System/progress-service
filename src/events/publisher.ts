@@ -7,18 +7,30 @@ import { logger } from '../config/logger.js';
 interface SimpleConnection { createChannel: () => Promise<Channel>; close?: () => Promise<void>; }
 let connection: SimpleConnection | null = null;
 let channel: Channel | null = null;
-const EXCHANGE = process.env.RABBIT_EXCHANGE || 'domain.events';
+const EXCHANGE = 'domain.events';
 
 export async function initEventBus(){
   if(channel) return channel;
   const url = process.env.RABBITMQ_URL;
   if(!url){ logger.warn('RABBITMQ_URL not set, events disabled'); return null; }
-  const conn = await connect(url) as unknown as SimpleConnection; // adapt
-  connection = conn;
-  channel = await conn.createChannel();
-  if(channel) await channel.assertExchange(EXCHANGE,'topic',{ durable:true });
-  logger.info({ EXCHANGE }, 'event_bus_initialized');
-  return channel;
+  const maxAttempts = 10;
+  const baseDelayMs = 500;
+  for(let attempt=1; attempt<=maxAttempts; attempt++){
+    try {
+      const conn = await connect(url) as unknown as SimpleConnection; // adapt
+      connection = conn;
+      channel = await conn.createChannel();
+      if(channel) await channel.assertExchange(EXCHANGE,'topic',{ durable:true });
+      logger.info({ EXCHANGE }, 'event_bus_initialized');
+      return channel;
+    } catch(err){
+      const delay = baseDelayMs * attempt;
+      logger.warn({ attempt, delay, err }, 'event_bus_connect_retry');
+      await new Promise(r=>setTimeout(r, delay));
+    }
+  }
+  logger.error('failed_to_initialize_event_bus');
+  return null;
 }
 
 export async function publishEvent<T>(evt: Omit<DomainEvent<T>, 'eventId' | 'occurredAt' | 'version'> & { version?:number }){

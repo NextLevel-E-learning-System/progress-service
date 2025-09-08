@@ -4,7 +4,9 @@ import { createInscricaoHandler, getInscricaoHandler, patchProgressoHandler, com
 import { listCertificatesHandler, issueCertificateHandler, certificatePdfHandler } from '../controllers/certificateController.js';
 import { listTracksHandler, userTrackProgressHandler } from '../controllers/trackController.js';
 export const progressRouter = Router();
-progressRouter.post('/inscricoes', createInscricaoHandler);
+
+// Inscrições e progresso
+progressRouter.post('/inscricoes', createInscricaoHandler); // POST /progress/v1/inscricoes { funcionario_id, curso_id }
 progressRouter.get('/inscricoes/:id', getInscricaoHandler);
 progressRouter.get('/inscricoes/usuario/:userId', listInscricoesUsuarioHandler);
 progressRouter.patch('/inscricoes/:id/progresso', patchProgressoHandler);

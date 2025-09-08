@@ -5,10 +5,25 @@ type CreateInscricaoInput = z.infer<typeof createInscricaoSchema>;
 import { HttpError } from '../utils/httpError.js';
 import { publishEvent } from '../events/publisher.js';
 import { ModuleCompletedPayload, CourseCompletedPayload, CertificateIssuedPayload } from '../events/contracts.js';
-import { issueCertificate } from '../repositories/certificateRepository.js'; // permanece
-export async function createInscricao(d:CreateInscricaoInput){ await insertInscricao(d); return { id:d.id }; }
-export async function getInscricao(id:string){ const i = await findInscricao(id); if(!i) throw new HttpError(404,'nao_encontrado'); return i; }
-export async function patchProgresso(id:string, valor:number){ const up = await updateProgresso(id, valor); if(!up) throw new HttpError(404,'nao_encontrado'); return up; }
+import { issueCertificate } from '../repositories/certificateRepository.js';
+
+export async function createInscricao(d:CreateInscricaoInput){ 
+	const inscricao = await insertInscricao(d); 
+	return inscricao; 
+}
+
+export async function getInscricao(id:string){ 
+	const i = await findInscricao(id); 
+	if(!i) throw new HttpError(404,'nao_encontrado'); 
+	return i; 
+}
+
+export async function patchProgresso(id:string, valor:number){ 
+	const up = await updateProgresso(id, valor); 
+	if(!up) throw new HttpError(404,'nao_encontrado'); 
+	return up; 
+}
+
 export async function completeModule(inscricaoId:string, moduloId:string){
 	const r = await completeModuleDb(inscricaoId, moduloId);
 	if(!r) throw new HttpError(404,'nao_encontrado');
@@ -16,6 +31,7 @@ export async function completeModule(inscricaoId:string, moduloId:string){
 	if (r.concluido) await emitCourseCompleted(r);
 	return r;
 }
+
 export async function listInscricoesUsuario(userId:string){
 	return listInscricoesByUser(userId);
 }

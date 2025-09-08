@@ -11,8 +11,14 @@ const accessKeyId = process.env.STORAGE_ACCESS_KEY || 'minio';
 const secretAccessKey = process.env.STORAGE_SECRET_KEY || 'minio123';
 const localStoragePath = process.env.LOCAL_STORAGE_PATH || './storage';
 const publicUrlBase = process.env.PUBLIC_URL_BASE || 'http://localhost:3333/storage';
+const envPrefix = process.env.STORAGE_ENV_PREFIX || 'dev'; // dev | staging | prod
 
 const forcePathStyle = storageType !== 's3'; // AWS S3 usa virtual-hosted style
+
+// Função para adicionar prefixo de ambiente nas storage keys
+function addEnvPrefix(key: string): string {
+  return `${envPrefix}/${key}`;
+}
 
 // S3 client (usado para S3 real ou MinIO)
 export const s3 = storageType !== 'local' ? new S3Client({ 
@@ -23,40 +29,47 @@ export const s3 = storageType !== 'local' ? new S3Client({
 }) : null;
 
 export async function uploadObject(bucket: string, key: string, body: Buffer | Uint8Array | string, contentType?: string) {
+  const prefixedKey = addEnvPrefix(key);
+  
   if (storageType === 'local') {
     // Storage local para desenvolvimento
     const bucketPath = path.join(localStoragePath, bucket);
-    const filePath = path.join(bucketPath, key);
+    const filePath = path.join(bucketPath, prefixedKey);
     
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     await fs.writeFile(filePath, body);
     
-    return { bucket, key, localPath: filePath };
+    return { bucket, key: prefixedKey, localPath: filePath };
   } else {
     // S3/MinIO para produção
-    await s3!.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: contentType }));
-    return { bucket, key };
+    await s3!.send(new PutObjectCommand({ Bucket: bucket, Key: prefixedKey, Body: body, ContentType: contentType }));
+    return { bucket, key: prefixedKey };
   }
 }
 
 export async function presign(bucket: string, key: string, expires = 300) {
+  // Se a key já tem prefixo, usa como está, senão adiciona
+  const prefixedKey = key.includes('/') && key.split('/')[0] === envPrefix ? key : addEnvPrefix(key);
+  
   if (storageType === 'local') {
     // Para local, retorna URL direta (sem expiração real)
-    return `${publicUrlBase}/${bucket}/${key}`;
+    return `${publicUrlBase}/${bucket}/${prefixedKey}`;
   } else {
     // S3/MinIO: presigned URL real
     try { 
-      await s3!.send(new HeadObjectCommand({ Bucket: bucket, Key: key })); 
+      await s3!.send(new HeadObjectCommand({ Bucket: bucket, Key: prefixedKey })); 
     } catch { 
       return null; 
     }
-    return getSignedUrl(s3!, new GetObjectCommand({ Bucket: bucket, Key: key }), { expiresIn: expires });
+    return getSignedUrl(s3!, new GetObjectCommand({ Bucket: bucket, Key: prefixedKey }), { expiresIn: expires });
   }
 }
 
 export async function objectExists(bucket: string, key: string): Promise<boolean> {
+  const prefixedKey = key.includes('/') && key.split('/')[0] === envPrefix ? key : addEnvPrefix(key);
+  
   if (storageType === 'local') {
-    const filePath = path.join(localStoragePath, bucket, key);
+    const filePath = path.join(localStoragePath, bucket, prefixedKey);
     try {
       await fs.access(filePath);
       return true;
@@ -65,7 +78,7 @@ export async function objectExists(bucket: string, key: string): Promise<boolean
     }
   } else {
     try {
-      await s3!.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+      await s3!.send(new HeadObjectCommand({ Bucket: bucket, Key: prefixedKey }));
       return true;
     } catch {
       return false;

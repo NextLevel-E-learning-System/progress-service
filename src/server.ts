@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import swaggerUi from 'swagger-ui-express';
 import { loadOpenApi } from './config/openapi.js';
 import { logger } from './config/logger.js';
 import { progressRouter } from './routes/progressRoutes.js';
@@ -18,7 +17,6 @@ export function createServer(){
   
   const spec=loadOpenApi('Progress Service API');
   app.get('/openapi.json', (_req,res)=>res.json(spec));
-  app.use('/docs', swaggerUi.serve, swaggerUi.setup(spec));
   app.use('/progress/v1', progressRouter);
   app.use(errorHandler);
   return app;

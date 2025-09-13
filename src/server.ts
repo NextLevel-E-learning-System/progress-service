@@ -17,6 +17,7 @@ export function createServer(){
   app.use(staticFilesMiddleware);
   
   const spec=loadOpenApi('Progress Service API');
+  app.get('/openapi.json', (_req,res)=>res.json(spec));
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(spec));
   app.use('/progress/v1', progressRouter);
   app.use(errorHandler);

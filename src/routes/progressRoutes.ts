@@ -5,17 +5,18 @@ import { listCertificatesHandler, issueCertificateHandler, certificatePdfHandler
 import { listTracksHandler, userTrackProgressHandler } from '../controllers/trackController.js';
 export const progressRouter = Router();
 
-// Inscrições e progresso
-progressRouter.post('/inscricoes', createInscricaoHandler); // POST /progress/v1/inscricoes { funcionario_id, curso_id }
+progressRouter.post('/inscricoes', createInscricaoHandler); 
 progressRouter.get('/inscricoes/:id', getInscricaoHandler);
 progressRouter.get('/inscricoes/usuario/:userId', listInscricoesUsuarioHandler);
 progressRouter.patch('/inscricoes/:id/progresso', patchProgressoHandler);
 progressRouter.post('/inscricoes/:id/modulos/:moduloId/concluir', completeModuleHandler);
-// Certificates (placeholder)
+
+// Certificates - PROTEGIDO (exceto validação)
 progressRouter.get('/certificates/user/:userId', listCertificatesHandler);
 progressRouter.post('/certificates/enrollment/:enrollmentId', issueCertificateHandler);
 progressRouter.get('/certificates/enrollment/:enrollmentId/pdf', certificatePdfHandler);
-// Validação pública (query: hash)
+
+// Validação pública (query: hash) - PÚBLICO
 progressRouter.get('/certificates/validate/:code', async (req,res,next)=>{
 	try {
 		const { code } = req.params;
@@ -30,6 +31,7 @@ progressRouter.get('/certificates/validate/:code', async (req,res,next)=>{
 		res.json({ valido, codigo: cert.codigo_certificado, curso_id: cert.curso_id, funcionario_id: cert.funcionario_id, data_emissao: cert.data_emissao });
 	} catch(e){ next(e); }
 });
-// Learning tracks (placeholder)
-progressRouter.get('/tracks', listTracksHandler);
+
+// Learning tracks - listar público, progresso pessoal protegido
+progressRouter.get('/tracks', listTracksHandler); // PÚBLICO
 progressRouter.get('/tracks/user/:userId', userTrackProgressHandler);

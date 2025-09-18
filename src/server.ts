@@ -15,8 +15,14 @@ export function createServer(){
   // Middleware para servir arquivos estáticos (apenas em modo local)
   app.use(staticFilesMiddleware);
   
-  const spec=loadOpenApi('Progress Service API');
-  app.get('/openapi.json', (_req,res)=>res.json(spec));
+  app.get('/openapi.json', async (_req,res)=>{
+    try {
+      const spec = await loadOpenApi('Progress Service API');
+      res.json(spec);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to load OpenAPI spec' });
+    }
+  });
   app.use('/progress/v1', progressRouter);
   app.use(errorHandler);
   return app;

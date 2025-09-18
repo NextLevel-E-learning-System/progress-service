@@ -1,4 +1,4 @@
-{
+export const openapiSpec = {
   "openapi": "3.0.3",
   "info": { "title": "Progress Service API", "version": "1.0.0" },
   "paths": {
@@ -144,38 +144,6 @@
         } 
       } 
     },
-      "post": {
-        "summary": "Concluir módulo e atualizar progresso",
-        "tags": ["progress"],
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
-          { "name": "moduloId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-        ],
-        "responses": {
-          "201": {
-            "description": "Módulo concluído",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "enrollmentId": { "type": "string", "format": "uuid" },
-                    "moduleId": { "type": "string", "format": "uuid" },
-                    "courseId": { "type": "string" },
-                    "userId": { "type": "string" },
-                    "progressPercent": { "type": "number" },
-                    "completedCourse": { "type": "boolean" }
-                  },
-                  "required": ["enrollmentId", "moduleId", "courseId", "userId", "progressPercent", "completedCourse"]
-                }
-              }
-            }
-          },
-          "404": { "description": "Não encontrado" }
-        }
-      }
-    }
-  ,
     "/progress/v1/inscricoes/{id}/modulos/{moduloId}/concluir": {
       "post": {
         "summary": "Concluir módulo e atualizar progresso",
@@ -270,3 +238,4 @@
       } 
     }
   }
+} as const;

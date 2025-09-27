@@ -18,18 +18,18 @@ progressRouter.get('/certificates/enrollment/:enrollmentId/pdf', certificatePdfH
 
 // Validação pública (query: hash) - PÚBLICO
 progressRouter.get('/certificates/validate/:code', async (req,res,next)=>{
-	try {
-		const { code } = req.params;
-		const { hash } = req.query as { hash?:string };
-		if(!hash) return res.status(400).json({ message:'hash ausente' });
-		const cert = await withClient(async c=>{
-			const r = await c.query('select codigo_certificado, hash_validacao, funcionario_id, curso_id, data_emissao from progress_service.certificados where codigo_certificado=$1',[code]);
-			return r.rows[0];
-		});
-		if(!cert) return res.status(404).json({ message:'certificado_nao_encontrado' });
-		const valido = cert.hash_validacao === hash;
-		res.json({ valido, codigo: cert.codigo_certificado, curso_id: cert.curso_id, funcionario_id: cert.funcionario_id, data_emissao: cert.data_emissao });
-	} catch(e){ next(e); }
+  try {
+    const { code } = req.params;
+    const { hash } = req.query as { hash?:string };
+    if(!hash) return res.status(400).json({ erro:'hash_ausente', mensagem:'Parâmetro hash ausente' });
+    const cert = await withClient(async c=>{
+      const r = await c.query('select codigo_certificado, hash_validacao, funcionario_id, curso_id, data_emissao from progress_service.certificados where codigo_certificado=$1',[code]);
+      return r.rows[0];
+    });
+    if(!cert) return res.status(404).json({ erro:'certificado_nao_encontrado', mensagem:'Certificado não encontrado' });
+    const valido = cert.hash_validacao === hash;
+    return res.json({ certificado:{ codigo: cert.codigo_certificado, curso_id: cert.curso_id, funcionario_id: cert.funcionario_id, data_emissao: cert.data_emissao, valido }, mensagem: 'Validação realizada' });
+  } catch(e){ next(e); }
 });
 
 // Learning tracks - listar público, progresso pessoal protegido

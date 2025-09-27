@@ -2,7 +2,6 @@ import { insertInscricao, findInscricao, updateProgresso, completeModuleDb, Comp
 import { createInscricaoSchema } from '../validation/progressSchemas.js';
 import { z } from 'zod';
 type CreateInscricaoInput = z.infer<typeof createInscricaoSchema>;
-import { HttpError } from '../utils/httpError.js';
 import { publishEvent } from '../events/publisher.js';
 import { ModuleCompletedPayload, CourseCompletedPayload, CertificateIssuedPayload } from '../events/contracts.js';
 import { issueCertificate } from '../repositories/certificateRepository.js';
@@ -14,26 +13,27 @@ export async function createInscricao(d:CreateInscricaoInput){
 
 export async function getInscricao(id:string){ 
 	const i = await findInscricao(id); 
-	if(!i) throw new HttpError(404,'nao_encontrado'); 
-	return i; 
+	if(!i) return { erro:'nao_encontrado', mensagem:'Inscrição não encontrada' };
+	return { inscricao: i, mensagem: 'Inscrição recuperada com sucesso' }; 
 }
 
 export async function patchProgresso(id:string, valor:number){ 
 	const up = await updateProgresso(id, valor); 
-	if(!up) throw new HttpError(404,'nao_encontrado'); 
-	return up; 
+	if(!up) return { erro:'nao_encontrado', mensagem:'Inscrição não encontrada' };
+	return { inscricao: up, mensagem: 'Progresso atualizado com sucesso' }; 
 }
 
 export async function completeModule(inscricaoId:string, moduloId:string){
 	const r = await completeModuleDb(inscricaoId, moduloId);
-	if(!r) throw new HttpError(404,'nao_encontrado');
+	if(!r) return { erro:'nao_encontrado', mensagem:'Inscrição não encontrada' };
 	await emitModuleCompleted(r);
 	if (r.concluido) await emitCourseCompleted(r);
-	return r;
+	return { resultado: r, mensagem: r.concluido? 'Módulo concluído e curso finalizado' : 'Módulo concluído' };
 }
 
 export async function listInscricoesUsuario(userId:string){
-	return listInscricoesByUser(userId);
+	const lista = await listInscricoesByUser(userId);
+	return lista;
 }
 
 async function emitModuleCompleted(r: CompleteResult){

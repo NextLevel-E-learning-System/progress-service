@@ -1,14 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { createInscricaoSchema, updateProgressoSchema } from '../validation/progressSchemas.js';
 import { createInscricao, getInscricao, patchProgresso, completeModule, listInscricoesUsuario } from '../services/progressService.js';
-import { HttpError } from '../utils/httpError.js';
+// Removido HttpError: respostas padronizadas diretas
 
 export async function createInscricaoHandler(req:Request,res:Response,next:NextFunction){ 
   const parsed=createInscricaoSchema.safeParse(req.body); 
-  if(!parsed.success) return next(new HttpError(400,'validation_error',parsed.error.issues)); 
+  if(!parsed.success) return res.status(400).json({ erro:'validation_error', mensagem:'Dados inválidos', detalhes: parsed.error.issues }); 
   try { 
     const r= await createInscricao(parsed.data); 
-    res.status(201).json(r);
+  res.status(201).json({ inscricao: r, mensagem: 'Inscrição criada com sucesso' });
   } catch(e){ 
     next(e);
   } 
@@ -16,8 +16,9 @@ export async function createInscricaoHandler(req:Request,res:Response,next:NextF
 
 export async function getInscricaoHandler(req:Request,res:Response,next:NextFunction){ 
   try { 
-    const r= await getInscricao(req.params.id); 
-    res.json(r);
+  const r= await getInscricao(req.params.id); 
+  if('erro' in r) return res.status(404).json(r);
+  res.json(r);
   } catch(e){ 
     next(e);
   } 
@@ -25,10 +26,11 @@ export async function getInscricaoHandler(req:Request,res:Response,next:NextFunc
 
 export async function patchProgressoHandler(req:Request,res:Response,next:NextFunction){ 
   const parsed=updateProgressoSchema.safeParse(req.body); 
-  if(!parsed.success) return next(new HttpError(400,'validation_error',parsed.error.issues)); 
+  if(!parsed.success) return res.status(400).json({ erro:'validation_error', mensagem:'Dados inválidos', detalhes: parsed.error.issues }); 
   try { 
-    const r= await patchProgresso(req.params.id, parsed.data.progresso_percentual); 
-    res.json(r);
+  const r= await patchProgresso(req.params.id, parsed.data.progresso_percentual); 
+  if('erro' in r) return res.status(404).json(r);
+  res.json(r);
   } catch(e){ 
     next(e);
   } 
@@ -36,18 +38,30 @@ export async function patchProgressoHandler(req:Request,res:Response,next:NextFu
 
 export async function completeModuleHandler(req:Request,res:Response,next:NextFunction){
   try { 
-    const r = await completeModule(req.params.id, req.params.moduloId); 
-    res.status(201).json(r);
+  const r = await completeModule(req.params.id, req.params.moduloId); 
+  if('erro' in r) return res.status(404).json(r);
+  res.status(201).json(r);
   } catch(e){ 
     next(e);
   } 
 }
 
 export async function listInscricoesUsuarioHandler(req:Request,res:Response,next:NextFunction){
-  try { 
-    const r = await listInscricoesUsuario(req.params.userId); 
-    res.json(r);
-  } catch(e){ 
+  try {
+    const userId = req.params.userId;
+ 
+    const inscricoes = await listInscricoesUsuario(userId);
+    const cursos_em_andamento = inscricoes.filter(i => i.status === 'EM_ANDAMENTO');
+    const cursos_concluidos = inscricoes.filter(i => i.status === 'CONCLUIDO');
+    res.json({
+      items: inscricoes,
+      cursos_em_andamento,
+      cursos_concluidos,
+      total_em_andamento: cursos_em_andamento.length,
+      total_concluidos: cursos_concluidos.length,
+      mensagem: 'Inscrições do usuário listadas com sucesso'
+    });
+  } catch(e){
     next(e);
-  } 
+  }
 }

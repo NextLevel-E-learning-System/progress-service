@@ -3,8 +3,7 @@ import cors from 'cors';
 import { loadOpenApi } from './config/openapi.js';
 import { logger } from './config/logger.js';
 import { progressRouter } from './routes/progressRoutes.js';
-import { errorHandler } from './middleware/errorHandler.js';
-
+ 
 export function createServer(){
   const app=express();
   app.use(express.json());
@@ -21,6 +20,5 @@ export function createServer(){
     }
   });
   app.use('/progress/v1', progressRouter);
-  app.use(errorHandler);
-  return app;
+   return app;
 }

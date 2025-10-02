@@ -1,11 +1,29 @@
 export const openapiSpec = {
   openapi: '3.0.3',
-  info: { title: 'Progress Service API', version: '1.1.0' },
+  info: { 
+    title: 'Progress Service API', 
+    version: '1.1.0',
+    description: 'Serviço de progresso de aprendizagem e inscrições'
+  },
+  tags: [
+    {
+      name: 'Progress - Inscrições',
+      description: 'Gestão de Inscrições - Inscrições de usuários em cursos'
+    },
+    {
+      name: 'Progress - Progresso',
+      description: 'Acompanhamento de Progresso - Progresso em módulos e atividades'
+    },
+    {
+      name: 'Progress - Certificados',
+      description: 'Gestão de Certificados - Certificados de conclusão'
+    }
+  ],
   paths: {
     '/progress/v1/inscricoes': {
       post: {
         summary: 'Criar inscrição',
-        tags: ['progress'],
+        tags: ['Progress - Inscrições'],
         requestBody: {
           required: true,
           content: {
@@ -45,7 +63,7 @@ export const openapiSpec = {
     '/progress/v1/inscricoes/{id}': {
       get: {
         summary: 'Obter inscrição',
-        tags: ['progress'],
+        tags: ['Progress - Inscrições'],
         parameters: [
           { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }
         ],
@@ -71,7 +89,7 @@ export const openapiSpec = {
     '/progress/v1/inscricoes/usuario/{userId}': {
       get: {
         summary: 'Listar inscrições do usuário (agregado)',
-        tags: ['progress'],
+        tags: ['Progress - Inscrições'],
         parameters: [
           { name: 'userId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }
         ],
@@ -101,7 +119,7 @@ export const openapiSpec = {
     '/progress/v1/inscricoes/{id}/progresso': {
       patch: {
         summary: 'Atualizar progresso',
-        tags: ['progress'],
+        tags: ['Progress - Progresso'],
         parameters: [
           { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }
         ],
@@ -141,7 +159,7 @@ export const openapiSpec = {
     '/progress/v1/inscricoes/{id}/modulos/{moduloId}/concluir': {
       post: {
         summary: 'Concluir módulo',
-        tags: ['progress'],
+        tags: ['Progress - Progresso'],
         parameters: [
           { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
           { name: 'moduloId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }
@@ -168,7 +186,7 @@ export const openapiSpec = {
     '/progress/v1/certificates/user/{userId}': {
       get: {
         summary: 'Certificados do usuário',
-        tags: ['certificates'],
+        tags: ['Progress - Certificados'],
         parameters: [
           { name: 'userId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }
         ],
@@ -194,7 +212,7 @@ export const openapiSpec = {
     '/progress/v1/certificates/enrollment/{enrollmentId}': {
       post: {
         summary: 'Emitir/Recuperar certificado',
-        tags: ['certificates'],
+        tags: ['Progress - Certificados'],
         parameters: [
           { name: 'enrollmentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }
         ],
@@ -222,7 +240,7 @@ export const openapiSpec = {
     '/progress/v1/certificates/enrollment/{enrollmentId}/pdf': {
       get: {
         summary: 'Obter PDF certificado',
-        tags: ['certificates'],
+        tags: ['Progress - Certificados'],
         parameters: [
           { name: 'enrollmentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }
         ],
@@ -251,7 +269,7 @@ export const openapiSpec = {
     '/progress/v1/certificates/validate/{code}': {
       get: {
         summary: 'Validar certificado',
-        tags: ['certificates'],
+        tags: ['Progress - Certificados'],
         parameters: [
           { name: 'code', in: 'path', required: true, schema: { type: 'string' } },
           { name: 'hash', in: 'query', required: true, schema: { type: 'string' } }

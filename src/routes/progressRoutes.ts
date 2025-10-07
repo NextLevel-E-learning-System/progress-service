@@ -1,12 +1,11 @@
 import { Router } from 'express';
 import { withClient } from '../db.js';
-import { createInscricaoHandler, getInscricaoHandler, patchProgressoHandler, completeModuleHandler, listInscricoesUsuarioHandler, startModuleHandler, completeModuleNewHandler } from '../controllers/progressController.js';
+import { createInscricaoHandler, patchProgressoHandler, completeModuleHandler, listInscricoesUsuarioHandler, startModuleHandler, completeModuleNewHandler } from '../controllers/progressController.js';
 import { listCertificatesHandler, issueCertificateHandler, certificatePdfHandler } from '../controllers/certificateController.js';
 import { listTracksHandler, userTrackProgressHandler } from '../controllers/trackController.js';
 export const progressRouter = Router();
 
 progressRouter.post('/inscricoes', createInscricaoHandler); 
-progressRouter.get('/inscricoes/:id', getInscricaoHandler);
 progressRouter.get('/inscricoes/usuario/:userId', listInscricoesUsuarioHandler);
 progressRouter.patch('/inscricoes/:id/progresso', patchProgressoHandler);
 

@@ -63,16 +63,10 @@ export async function completeModuleHandler(req:Request,res:Response,next:NextFu
 export async function listInscricoesUsuarioHandler(req:Request,res:Response,next:NextFunction){
   try {
     const userId = req.params.userId;
- 
     const inscricoes = await listInscricoesUsuario(userId);
-    const cursos_em_andamento = inscricoes.filter(i => i.status === 'EM_ANDAMENTO');
-    const cursos_concluidos = inscricoes.filter(i => i.status === 'CONCLUIDO');
     res.json({
       items: inscricoes,
-      cursos_em_andamento,
-      cursos_concluidos,
-      total_em_andamento: cursos_em_andamento.length,
-      total_concluidos: cursos_concluidos.length,
+      total: inscricoes.length,
       mensagem: 'Inscrições do usuário listadas com sucesso'
     });
   } catch(e){

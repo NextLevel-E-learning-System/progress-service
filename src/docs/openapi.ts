@@ -2,8 +2,8 @@ export const openapiSpec = {
   openapi: '3.0.3',
   info: { 
     title: 'Progress Service API', 
-    version: '1.3.0',
-    description: 'Serviço de progresso de aprendizagem e inscrições.\n\nChangelog 1.3.0: Adicionados endpoints para iniciar/concluir módulos e validação de pré-requisitos.\nChangelog 1.2.0: Adicionada prevenção de inscrições duplicadas e resposta 409 detalhada com a inscrição já existente.'
+    version: '1.4.0',
+    description: 'Serviço de progresso de aprendizagem e inscrições.\n\nChangelog 1.4.0: Simplificado endpoint de listagem - removido endpoint individual, mantido apenas listagem por usuário.\nChangelog 1.3.0: Adicionados endpoints para iniciar/concluir módulos e validação de pré-requisitos.\nChangelog 1.2.0: Adicionada prevenção de inscrições duplicadas e resposta 409 detalhada com a inscrição já existente.'
   },
   tags: [
     {
@@ -75,53 +75,32 @@ export const openapiSpec = {
         }
       }
     },
-    '/progress/v1/inscricoes/{id}': {
-      get: {
-        summary: 'Obter inscrição',
-        tags: ['Progress - Inscrições'],
-        parameters: [
-          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }
-        ],
-        responses: {
-          '200': {
-            description: 'Encontrada',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    inscricao: { $ref: '#/components/schemas/Inscricao' },
-                    mensagem: { type: 'string' }
-                  }
-                }
-              }
-            }
-          },
-            '404': { description: 'Não encontrada', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
-        }
-      }
-    },
     '/progress/v1/inscricoes/usuario/{userId}': {
       get: {
-        summary: 'Listar inscrições do usuário (agregado)',
+        summary: 'Listar todas as inscrições do usuário',
         tags: ['Progress - Inscrições'],
+        description: 'Retorna todas as inscrições do usuário. A filtragem por status deve ser feita no frontend.',
         parameters: [
           { name: 'userId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }
         ],
         responses: {
           '200': {
-            description: 'Lista agregada',
+            description: 'Lista de inscrições',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
-                  required: ['items'],
+                  required: ['items', 'total'],
                   properties: {
-                    items: { type: 'array', items: { $ref: '#/components/schemas/Inscricao' } },
-                    cursos_em_andamento: { type: 'array', items: { $ref: '#/components/schemas/Inscricao' } },
-                    cursos_concluidos: { type: 'array', items: { $ref: '#/components/schemas/Inscricao' } },
-                    total_em_andamento: { type: 'integer' },
-                    total_concluidos: { type: 'integer' },
+                    items: { 
+                      type: 'array', 
+                      items: { $ref: '#/components/schemas/Inscricao' },
+                      description: 'Lista completa de inscrições do usuário'
+                    },
+                    total: { 
+                      type: 'integer',
+                      description: 'Total de inscrições' 
+                    },
                     mensagem: { type: 'string' }
                   }
                 }

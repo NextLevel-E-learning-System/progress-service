@@ -1,4 +1,4 @@
-import { insertInscricao, findInscricao, updateProgresso, completeModuleDb, CompleteResult, listInscricoesByUser } from '../repositories/progressRepository.js';
+import { insertInscricao, findInscricao, updateProgresso, completeModuleDb, CompleteResult, listInscricoesByUser, findActiveInscricaoByUserCourse } from '../repositories/progressRepository.js';
 import { createInscricaoSchema } from '../validation/progressSchemas.js';
 import { z } from 'zod';
 type CreateInscricaoInput = z.infer<typeof createInscricaoSchema>;
@@ -7,6 +7,11 @@ import { ModuleCompletedPayload, CourseCompletedPayload, CertificateIssuedPayloa
 import { issueCertificate } from '../repositories/certificateRepository.js';
 
 export async function createInscricao(d:CreateInscricaoInput){ 
+	// Verifica duplicidade de inscrição ativa
+	const existente = await findActiveInscricaoByUserCourse(d.funcionario_id, d.curso_id);
+	if(existente){
+		return { erro:'inscricao_duplicada', mensagem:'Usuário já possui inscrição ativa neste curso', inscricao: existente };
+	}
 	const inscricao = await insertInscricao(d); 
 	return inscricao; 
 }

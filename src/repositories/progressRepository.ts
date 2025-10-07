@@ -1,13 +1,29 @@
 import { withClient } from '../db.js';
 export interface CompleteResult { inscricao_id:string; modulo_id:string; progresso_percentual:number; concluido:boolean; data_conclusao: Date | null; funcionario_id?:string; curso_id?:string; }
 interface InsertInscricao { funcionario_id:string; curso_id:string; }
+
+// Insere nova inscrição (assume que duplicidade já foi checada antes)
 export async function insertInscricao(d:InsertInscricao){ 
 	return withClient(async c => {
 		const r = await c.query('insert into progress_service.inscricoes (funcionario_id, curso_id, status, progresso_percentual, data_inicio) values ($1,$2,$3,0,now()) returning *', [d.funcionario_id,d.curso_id,'EM_ANDAMENTO']); 
 		return r.rows[0];
 	});
 }
+
+// Busca inscrição por id
 export async function findInscricao(id:string){ return withClient(async c=>{ const r = await c.query('select id, funcionario_id, curso_id, status, progresso_percentual, data_inscricao, data_inicio, data_conclusao from progress_service.inscricoes where id=$1',[id]); return r.rows[0]; }); }
+
+// Busca inscrição ativa (em andamento) de um usuário em um curso
+export async function findActiveInscricaoByUserCourse(funcionarioId:string, cursoId:string){
+	return withClient(async c=>{
+		const r = await c.query(`select id, funcionario_id, curso_id, status, progresso_percentual, data_inscricao, data_inicio, data_conclusao
+			from progress_service.inscricoes
+			where funcionario_id=$1 and curso_id=$2 and status='EM_ANDAMENTO'
+			order by data_inscricao desc limit 1`,[funcionarioId, cursoId]);
+		return r.rows[0];
+	});
+}
+
 export async function updateProgresso(id:string, valor:number){ return withClient(async c=>{ const r = await c.query('update progress_service.inscricoes set progresso_percentual=$1 where id=$2 returning id, progresso_percentual',[valor,id]); return r.rows[0]; }); }
 export async function completeModuleDb(inscricaoId:string, moduloId:string): Promise<CompleteResult | null> {
 	return withClient(async c => {

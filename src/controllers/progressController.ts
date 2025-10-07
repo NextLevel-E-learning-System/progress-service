@@ -1,15 +1,21 @@
 import { Request, Response, NextFunction } from 'express';
 import { createInscricaoSchema, updateProgressoSchema } from '../validation/progressSchemas.js';
 import { createInscricao, getInscricao, patchProgresso, completeModule, listInscricoesUsuario } from '../services/progressService.js';
-// Removido HttpError: respostas padronizadas diretas
 
 export async function createInscricaoHandler(req:Request,res:Response,next:NextFunction){ 
   const parsed=createInscricaoSchema.safeParse(req.body); 
   if(!parsed.success) return res.status(400).json({ erro:'validation_error', mensagem:'Dados inválidos', detalhes: parsed.error.issues }); 
   try { 
     const r= await createInscricao(parsed.data); 
-  res.status(201).json({ inscricao: r, mensagem: 'Inscrição criada com sucesso' });
+    if(r && typeof r === 'object' && 'erro' in r && r.erro === 'inscricao_duplicada'){
+      return res.status(409).json(r);
+    }
+    res.status(201).json({ inscricao: r, mensagem: 'Inscrição criada com sucesso' });
   } catch(e){ 
+    // Tratamento de possível violação de unicidade (concorrência)
+    if (typeof e === 'object' && e !== null && 'code' in e && (e as { code?: string }).code === '23505') {
+      return res.status(409).json({ erro:'inscricao_duplicada', mensagem:'Usuário já possui inscrição ativa neste curso (detected race condition)' });
+    }
     next(e);
   } 
 }

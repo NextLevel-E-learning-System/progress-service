@@ -18,7 +18,7 @@ export async function findActiveInscricaoByUserCourse(funcionarioId:string, curs
 	return withClient(async c=>{
 		const r = await c.query(`select id, funcionario_id, curso_id, status, progresso_percentual, data_inscricao, data_inicio, data_conclusao
 			from progress_service.inscricoes
-			where funcionario_id=$1 and curso_id=$2 and status='EM_ANDAMENTO'
+			where funcionario_id=$1 and curso_id=$2 and status in ('EM_ANDAMENTO','CONCLUIDO')
 			order by data_inscricao desc limit 1`,[funcionarioId, cursoId]);
 		return r.rows[0];
 	});

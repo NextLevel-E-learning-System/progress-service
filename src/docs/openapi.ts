@@ -2,8 +2,8 @@ export const openapiSpec = {
   openapi: '3.0.3',
   info: { 
     title: 'Progress Service API', 
-    version: '1.1.0',
-    description: 'Serviço de progresso de aprendizagem e inscrições'
+    version: '1.2.0',
+    description: 'Serviço de progresso de aprendizagem e inscrições.\n\nChangelog 1.2.0: Adicionada prevenção de inscrições duplicadas e resposta 409 detalhada com a inscrição já existente.'
   },
   tags: [
     {
@@ -56,7 +56,14 @@ export const openapiSpec = {
           },
           '400': { description: 'Dados inválidos', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           '404': { description: 'Curso ou funcionário não encontrado', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
-          '409': { description: 'Funcionário já inscrito', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+          '409': { 
+            description: 'Usuário já possui inscrição ativa neste curso', 
+            content: { 
+              'application/json': { 
+                schema: { $ref: '#/components/schemas/DuplicateEnrollmentResponse' } 
+              } 
+            } 
+          }
         }
       }
     },
@@ -326,6 +333,15 @@ export const openapiSpec = {
         type: 'object',
         required: ['erro', 'mensagem'],
         properties: { erro: { type: 'string' }, mensagem: { type: 'string' } }
+      },
+      DuplicateEnrollmentResponse: {
+        type: 'object',
+        required: ['erro','mensagem','inscricao'],
+        properties: {
+          erro: { type: 'string', example: 'inscricao_duplicada' },
+          mensagem: { type: 'string', example: 'Usuário já possui inscrição ativa neste curso' },
+          inscricao: { $ref: '#/components/schemas/Inscricao' }
+        }
       },
       Inscricao: {
         type: 'object',

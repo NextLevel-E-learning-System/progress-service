@@ -1,4 +1,4 @@
-import { insertInscricao, findInscricao, updateProgresso, completeModuleDb, CompleteResult, listInscricoesByUser, findActiveInscricaoByUserCourse } from '../repositories/progressRepository.js';
+import { insertInscricao, findInscricao, updateProgresso, completeModuleDb, CompleteResult, listInscricoesByUser, findActiveInscricaoByUserCourse, startModule, completeModuleNew, checkCoursePrerequisites } from '../repositories/progressRepository.js';
 import { createInscricaoSchema } from '../validation/progressSchemas.js';
 import { z } from 'zod';
 type CreateInscricaoInput = z.infer<typeof createInscricaoSchema>;
@@ -10,8 +10,22 @@ export async function createInscricao(d:CreateInscricaoInput){
 	// Verifica duplicidade de inscrição ativa
 	const existente = await findActiveInscricaoByUserCourse(d.funcionario_id, d.curso_id);
 	if(existente){
-		return { erro:'inscricao_duplicada', mensagem:'Usuário já possui inscrição ativa neste curso', inscricao: existente };
+		return { erro:'inscricao_duplicada', mensagem:'Usuário já possui inscrição ativa ou concluída neste curso', inscricao: existente };
 	}
+	
+	// Verifica pré-requisitos do curso
+	const preReqCheck = await checkCoursePrerequisites(d.funcionario_id, d.curso_id);
+	if(!preReqCheck){
+		return { erro:'curso_nao_encontrado', mensagem:'Curso não encontrado' };
+	}
+	if(!preReqCheck.atendidos){
+		return { 
+			erro:'pre_requisitos_nao_atendidos', 
+			mensagem:'Pré-requisitos do curso não foram atendidos', 
+			pendentes: preReqCheck.pendentes 
+		};
+	}
+	
 	const inscricao = await insertInscricao(d); 
 	return inscricao; 
 }
@@ -39,6 +53,56 @@ export async function completeModule(inscricaoId:string, moduloId:string){
 export async function listInscricoesUsuario(userId:string){
 	const lista = await listInscricoesByUser(userId);
 	return lista;
+}
+
+export async function startModuleService(inscricaoId: string, moduloId: string) {
+	const result = await startModule(inscricaoId, moduloId);
+	if (!result) {
+		return { erro: 'inscricao_nao_encontrada', mensagem: 'Inscrição não encontrada' };
+	}
+	if (typeof result === 'object' && 'erro' in result) {
+		const errorMap = {
+			inscricao_nao_ativa: 'Inscrição não está ativa',
+			modulo_ja_iniciado: 'Módulo já foi iniciado anteriormente'
+		};
+		return { erro: result.erro, mensagem: errorMap[result.erro as keyof typeof errorMap] || 'Erro desconhecido' };
+	}
+	return { progresso_modulo: result, mensagem: 'Módulo iniciado com sucesso' };
+}
+
+export async function completeModuleService(inscricaoId: string, moduloId: string) {
+	const result = await completeModuleNew(inscricaoId, moduloId);
+	if (!result) {
+		return { erro: 'progresso_nao_encontrado', mensagem: 'Progresso do módulo não encontrado' };
+	}
+	if (typeof result === 'object' && 'erro' in result) {
+		const errorMap = {
+			modulo_ja_concluido: 'Módulo já foi concluído anteriormente'
+		};
+		return { erro: result.erro, mensagem: errorMap[result.erro as keyof typeof errorMap] || 'Erro desconhecido' };
+	}
+	
+	// Emite eventos se necessário
+	const completeResultCompatible: CompleteResult = {
+		inscricao_id: result.inscricao_id,
+		modulo_id: result.modulo_id,
+		progresso_percentual: result.progresso_percentual,
+		concluido: result.curso_concluido,
+		data_conclusao: result.curso_concluido ? new Date() : null,
+		funcionario_id: result.funcionario_id,
+		curso_id: result.curso_id
+	};
+	
+	if (result.curso_concluido) {
+		await emitCourseCompleted(completeResultCompatible);
+	} else {
+		await emitModuleCompleted(completeResultCompatible);
+	}
+	
+	return { 
+		resultado: result, 
+		mensagem: result.curso_concluido ? 'Módulo concluído e curso finalizado!' : 'Módulo concluído com sucesso' 
+	};
 }
 
 async function emitModuleCompleted(r: CompleteResult){

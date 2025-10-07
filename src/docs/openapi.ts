@@ -2,8 +2,8 @@ export const openapiSpec = {
   openapi: '3.0.3',
   info: { 
     title: 'Progress Service API', 
-    version: '1.2.0',
-    description: 'Serviço de progresso de aprendizagem e inscrições.\n\nChangelog 1.2.0: Adicionada prevenção de inscrições duplicadas e resposta 409 detalhada com a inscrição já existente.'
+    version: '1.3.0',
+    description: 'Serviço de progresso de aprendizagem e inscrições.\n\nChangelog 1.3.0: Adicionados endpoints para iniciar/concluir módulos e validação de pré-requisitos.\nChangelog 1.2.0: Adicionada prevenção de inscrições duplicadas e resposta 409 detalhada com a inscrição já existente.'
   },
   tags: [
     {
@@ -61,6 +61,14 @@ export const openapiSpec = {
             content: { 
               'application/json': { 
                 schema: { $ref: '#/components/schemas/DuplicateEnrollmentResponse' } 
+              } 
+            } 
+          },
+          '422': { 
+            description: 'Pré-requisitos não atendidos', 
+            content: { 
+              'application/json': { 
+                schema: { $ref: '#/components/schemas/PrerequisiteErrorResponse' } 
               } 
             } 
           }
@@ -163,9 +171,65 @@ export const openapiSpec = {
         }
       }
     },
+    '/progress/v1/inscricoes/{inscricaoId}/modulos/{moduloId}/iniciar': {
+      post: {
+        summary: 'Iniciar módulo',
+        tags: ['Progress - Progresso'],
+        parameters: [
+          { name: 'inscricaoId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          { name: 'moduloId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }
+        ],
+        responses: {
+          '201': {
+            description: 'Módulo iniciado',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    progresso_modulo: { $ref: '#/components/schemas/ProgressoModulo' },
+                    mensagem: { type: 'string' }
+                  }
+                }
+              }
+            }
+          },
+          '404': { description: 'Inscrição não encontrada', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          '409': { description: 'Inscrição inativa ou módulo já iniciado', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+        }
+      }
+    },
+    '/progress/v1/inscricoes/{inscricaoId}/modulos/{moduloId}/concluir': {
+      patch: {
+        summary: 'Concluir módulo (novo)',
+        tags: ['Progress - Progresso'],
+        parameters: [
+          { name: 'inscricaoId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          { name: 'moduloId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }
+        ],
+        responses: {
+          '200': {
+            description: 'Módulo concluído',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    resultado: { $ref: '#/components/schemas/ModuleCompletionResultNew' },
+                    mensagem: { type: 'string' }
+                  }
+                }
+              }
+            }
+          },
+          '404': { description: 'Progresso não encontrado', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          '409': { description: 'Módulo já concluído', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+        }
+      }
+    },
     '/progress/v1/inscricoes/{id}/modulos/{moduloId}/concluir': {
       post: {
-        summary: 'Concluir módulo',
+        summary: 'Concluir módulo (compatibilidade)',
         tags: ['Progress - Progresso'],
         parameters: [
           { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
@@ -341,6 +405,50 @@ export const openapiSpec = {
           erro: { type: 'string', example: 'inscricao_duplicada' },
           mensagem: { type: 'string', example: 'Usuário já possui inscrição ativa neste curso' },
           inscricao: { $ref: '#/components/schemas/Inscricao' }
+        }
+      },
+      PrerequisiteErrorResponse: {
+        type: 'object',
+        required: ['erro','mensagem','pendentes'],
+        properties: {
+          erro: { type: 'string', example: 'pre_requisitos_nao_atendidos' },
+          mensagem: { type: 'string', example: 'Pré-requisitos do curso não foram atendidos' },
+          pendentes: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                codigo: { type: 'string' },
+                titulo: { type: 'string' }
+              }
+            }
+          }
+        }
+      },
+      ProgressoModulo: {
+        type: 'object',
+        required: ['id','inscricao_id','modulo_id','data_inicio'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          inscricao_id: { type: 'string', format: 'uuid' },
+          modulo_id: { type: 'string', format: 'uuid' },
+          data_inicio: { type: 'string', format: 'date-time' },
+          data_conclusao: { type: 'string', format: 'date-time', nullable: true },
+          tempo_gasto: { type: 'integer', nullable: true },
+          criado_em: { type: 'string', format: 'date-time' },
+          atualizado_em: { type: 'string', format: 'date-time' }
+        }
+      },
+      ModuleCompletionResultNew: {
+        type: 'object',
+        required: ['inscricao_id','modulo_id','progresso_percentual','curso_concluido'],
+        properties: {
+          inscricao_id: { type: 'string', format: 'uuid' },
+          modulo_id: { type: 'string', format: 'uuid' },
+          progresso_percentual: { type: 'integer' },
+          curso_concluido: { type: 'boolean' },
+          funcionario_id: { type: 'string', format: 'uuid' },
+          curso_id: { type: 'string' }
         }
       },
       Inscricao: {

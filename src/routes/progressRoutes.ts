@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { withClient } from '../db.js';
-import { createInscricaoHandler, getInscricaoHandler, patchProgressoHandler, completeModuleHandler, listInscricoesUsuarioHandler } from '../controllers/progressController.js';
+import { createInscricaoHandler, getInscricaoHandler, patchProgressoHandler, completeModuleHandler, listInscricoesUsuarioHandler, startModuleHandler, completeModuleNewHandler } from '../controllers/progressController.js';
 import { listCertificatesHandler, issueCertificateHandler, certificatePdfHandler } from '../controllers/certificateController.js';
 import { listTracksHandler, userTrackProgressHandler } from '../controllers/trackController.js';
 export const progressRouter = Router();
@@ -9,6 +9,12 @@ progressRouter.post('/inscricoes', createInscricaoHandler);
 progressRouter.get('/inscricoes/:id', getInscricaoHandler);
 progressRouter.get('/inscricoes/usuario/:userId', listInscricoesUsuarioHandler);
 progressRouter.patch('/inscricoes/:id/progresso', patchProgressoHandler);
+
+// Novos endpoints para progresso de módulo
+progressRouter.post('/inscricoes/:inscricaoId/modulos/:moduloId/iniciar', startModuleHandler);
+progressRouter.patch('/inscricoes/:inscricaoId/modulos/:moduloId/concluir', completeModuleNewHandler);
+
+// Manter endpoint antigo para compatibilidade
 progressRouter.post('/inscricoes/:id/modulos/:moduloId/concluir', completeModuleHandler);
 
 // Certificates - PROTEGIDO (exceto validação)

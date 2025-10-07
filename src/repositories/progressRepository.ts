@@ -78,3 +78,123 @@ export async function listInscricoesByUser(userId:string){
 		return r.rows;
 	});
 }
+
+// Inicia um módulo - cria registro em progresso_modulos
+export async function startModule(inscricaoId: string, moduloId: string) {
+	return withClient(async c => {
+		// Verifica se inscrição existe e está ativa
+		const inscricao = await c.query('select id, status from progress_service.inscricoes where id=$1', [inscricaoId]);
+		if (!inscricao.rows[0]) return null;
+		if (inscricao.rows[0].status !== 'EM_ANDAMENTO') return { erro: 'inscricao_nao_ativa' };
+		
+		// Verifica se módulo já foi iniciado
+		const existing = await c.query('select id from progress_service.progresso_modulos where inscricao_id=$1 and modulo_id=$2', [inscricaoId, moduloId]);
+		if (existing.rows[0]) return { erro: 'modulo_ja_iniciado' };
+		
+		// Cria registro de progresso
+		const result = await c.query(`
+			insert into progress_service.progresso_modulos (id, inscricao_id, modulo_id, data_inicio, criado_em, atualizado_em) 
+			values (gen_random_uuid(), $1, $2, now(), now(), now()) 
+			returning *
+		`, [inscricaoId, moduloId]);
+		
+		return result.rows[0];
+	});
+}
+
+// Finaliza um módulo - atualiza data_conclusao e recalcula progresso do curso
+export async function completeModuleNew(inscricaoId: string, moduloId: string) {
+	return withClient(async c => {
+		// Verifica se módulo foi iniciado
+		const progressoModulo = await c.query(`
+			select pm.*, i.curso_id, i.funcionario_id 
+			from progress_service.progresso_modulos pm
+			join progress_service.inscricoes i on i.id = pm.inscricao_id
+			where pm.inscricao_id=$1 and pm.modulo_id=$2
+		`, [inscricaoId, moduloId]);
+		
+		if (!progressoModulo.rows[0]) return null;
+		if (progressoModulo.rows[0].data_conclusao) return { erro: 'modulo_ja_concluido' };
+		
+		const cursoId = progressoModulo.rows[0].curso_id;
+		const funcionarioId = progressoModulo.rows[0].funcionario_id;
+		
+		// Marca módulo como concluído
+		await c.query(`
+			update progress_service.progresso_modulos 
+			set data_conclusao = now(), atualizado_em = now() 
+			where inscricao_id=$1 and modulo_id=$2
+		`, [inscricaoId, moduloId]);
+		
+		// Recalcula progresso do curso
+		const totalObrigatorios = await c.query(`
+			select count(*) as total from course_service.modulos 
+			where curso_id=$1 and obrigatorio=true
+		`, [cursoId]);
+		
+		const concluidos = await c.query(`
+			select count(*) as concluidos from progress_service.progresso_modulos pm
+			join course_service.modulos m on m.id = pm.modulo_id
+			where pm.inscricao_id=$1 and m.obrigatorio=true and pm.data_conclusao is not null
+		`, [inscricaoId]);
+		
+		const total = Number(totalObrigatorios.rows[0].total || 0);
+		const feitos = Number(concluidos.rows[0].concluidos || 0);
+		const progressoPercentual = total > 0 ? Math.round((feitos / total) * 100) : 0;
+		
+		// Atualiza progresso da inscrição
+		const statusFinal = progressoPercentual === 100 ? 'CONCLUIDO' : 'EM_ANDAMENTO';
+		const dataConclusao = progressoPercentual === 100 ? 'now()' : 'data_conclusao';
+		
+		await c.query(`
+			update progress_service.inscricoes 
+			set progresso_percentual=$1, status=$2, data_conclusao=${dataConclusao}, atualizado_em=now() 
+			where id=$3
+		`, [progressoPercentual, statusFinal, inscricaoId]);
+		
+		return {
+			inscricao_id: inscricaoId,
+			modulo_id: moduloId,
+			progresso_percentual: progressoPercentual,
+			curso_concluido: progressoPercentual === 100,
+			funcionario_id: funcionarioId,
+			curso_id: cursoId
+		};
+	});
+}
+
+// Verifica pré-requisitos de um curso para um funcionário
+export async function checkCoursePrerequisites(funcionarioId: string, cursoId: string) {
+	return withClient(async c => {
+		// Busca pré-requisitos do curso
+		const curso = await c.query('select pre_requisitos from course_service.cursos where codigo=$1', [cursoId]);
+		if (!curso.rows[0]) return null;
+		
+		const preRequisitos = curso.rows[0].pre_requisitos || [];
+		if (preRequisitos.length === 0) return { atendidos: true, pendentes: [] };
+		
+		const pendentes = [];
+		
+		// Verifica cada pré-requisito
+		for (const reqCursoId of preRequisitos) {
+			const concluido = await c.query(`
+				select 1 from progress_service.inscricoes 
+				where funcionario_id=$1 and curso_id=$2 and status='CONCLUIDO'
+			`, [funcionarioId, reqCursoId]);
+			
+			if (!concluido.rows[0]) {
+				// Busca título do curso pendente
+				const cursoInfo = await c.query('select titulo from course_service.cursos where codigo=$1', [reqCursoId]);
+				pendentes.push({
+					codigo: reqCursoId,
+					titulo: cursoInfo.rows[0]?.titulo || reqCursoId
+				});
+			}
+		}
+		
+		return {
+			atendidos: pendentes.length === 0,
+			pendentes
+		};
+	});
+}

@@ -163,6 +163,28 @@ export async function completeModuleNew(inscricaoId: string, moduloId: string) {
 	});
 }
 
+// Lista progresso dos módulos de uma inscrição
+export async function listModuleProgress(inscricaoId: string) {
+	return withClient(async c => {
+		const result = await c.query(`
+			select 
+				id,
+				inscricao_id,
+				modulo_id,
+				data_inicio,
+				data_conclusao,
+				tempo_gasto,
+				criado_em,
+				atualizado_em
+			from progress_service.progresso_modulos 
+			where inscricao_id=$1
+			order by data_inicio asc
+		`, [inscricaoId]);
+		
+		return result.rows;
+	});
+}
+
 // Verifica pré-requisitos de um curso para um funcionário
 export async function checkCoursePrerequisites(funcionarioId: string, cursoId: string) {
 	return withClient(async c => {

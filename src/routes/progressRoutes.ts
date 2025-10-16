@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { withClient } from '../db.js';
-import { createInscricaoHandler, patchProgressoHandler, completeModuleHandler, listInscricoesUsuarioHandler, startModuleHandler, completeModuleNewHandler } from '../controllers/progressController.js';
+import { createInscricaoHandler, patchProgressoHandler, completeModuleHandler, listInscricoesUsuarioHandler, startModuleHandler, completeModuleNewHandler, listModuleProgressHandler } from '../controllers/progressController.js';
 import { listCertificatesHandler, issueCertificateHandler, certificatePdfHandler } from '../controllers/certificateController.js';
 import { listTracksHandler, userTrackProgressHandler } from '../controllers/trackController.js';
 export const progressRouter = Router();
@@ -10,6 +10,7 @@ progressRouter.get('/inscricoes/usuario/:userId', listInscricoesUsuarioHandler);
 progressRouter.patch('/inscricoes/:id/progresso', patchProgressoHandler);
 
 // Novos endpoints para progresso de módulo
+progressRouter.get('/inscricoes/:inscricaoId/modulos', listModuleProgressHandler);
 progressRouter.post('/inscricoes/:inscricaoId/modulos/:moduloId/iniciar', startModuleHandler);
 progressRouter.patch('/inscricoes/:inscricaoId/modulos/:moduloId/concluir', completeModuleNewHandler);
 

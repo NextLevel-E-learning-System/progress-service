@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { createInscricaoSchema, updateProgressoSchema } from '../validation/progressSchemas.js';
-import { createInscricao, getInscricao, patchProgresso, completeModule, listInscricoesUsuario, startModuleService, completeModuleService } from '../services/progressService.js';
+import { createInscricao, getInscricao, patchProgresso, completeModule, listInscricoesUsuario, startModuleService, completeModuleService, listModuleProgressService } from '../services/progressService.js';
 
 export async function createInscricaoHandler(req:Request,res:Response,next:NextFunction){ 
   const parsed=createInscricaoSchema.safeParse(req.body); 
@@ -112,6 +112,16 @@ export async function completeModuleNewHandler(req:Request,res:Response,next:Nex
     }
     
     res.status(200).json(r);
+  } catch(e){
+    next(e);
+  }
+}
+
+export async function listModuleProgressHandler(req:Request,res:Response,next:NextFunction){
+  try {
+    const { inscricaoId } = req.params;
+    const progress = await listModuleProgressService(inscricaoId);
+    res.json(progress);
   } catch(e){
     next(e);
   }

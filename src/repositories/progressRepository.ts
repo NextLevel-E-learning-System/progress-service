@@ -147,11 +147,12 @@ export async function completeModuleNew(inscricaoId: string, moduloId: string) {
 			const xpAtual = Number(funcionarioAtual.rows[0]?.xp_total || 0);
 			const novoXpTotal = xpAtual + xpModulo;
 
-			// Determina o nível baseado no XP total
 			let nivel = 'Iniciante';
-			if (novoXpTotal >= 1000) nivel = 'Expert';
-			else if (novoXpTotal >= 500) nivel = 'Avançado';
-			else if (novoXpTotal >= 200) nivel = 'Intermediário';
+			if (novoXpTotal >= 3000) {
+				nivel = 'Avançado';
+			} else if (novoXpTotal >= 1000) {
+				nivel = 'Intermediário';
+			}
 
 			await c.query(`
 				update user_service.funcionarios 

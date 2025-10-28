@@ -81,13 +81,15 @@ export async function listCourseEnrollmentsService(cursoId: string) {
 					WHERE m.curso_id = i.curso_id
 				) as total_modulos,
 				(
-					SELECT AVG(t.nota_obtida) 
+					SELECT t.nota_obtida 
 					FROM assessment_service.tentativas t
 					JOIN assessment_service.avaliacoes a ON a.codigo = t.avaliacao_id
 					WHERE t.funcionario_id = i.funcionario_id 
 					AND a.curso_id = i.curso_id
 					AND t.status IN ('APROVADO', 'REPROVADO')
-				) as nota_media
+					ORDER BY t.nota_obtida DESC NULLS LAST
+					LIMIT 1
+				) as nota_final
 			FROM progress_service.inscricoes i
 			LEFT JOIN user_service.funcionarios f ON f.id = i.funcionario_id
 			LEFT JOIN progress_service.progresso_modulos pm ON pm.inscricao_id = i.id
@@ -110,7 +112,7 @@ export async function listCourseEnrollmentsService(cursoId: string) {
 			data_conclusao: row.data_conclusao || undefined,
 			modulos_completos: Number(row.modulos_completos),
 			total_modulos: Number(row.total_modulos),
-			nota_media: row.nota_media ? Number(row.nota_media) : undefined
+			nota_media: row.nota_final ? Number(row.nota_final) : undefined
 		}));
 	});
 }

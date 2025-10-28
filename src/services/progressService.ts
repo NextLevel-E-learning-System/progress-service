@@ -78,7 +78,7 @@ export async function listCourseEnrollmentsService(cursoId: string) {
 				(
 					SELECT COUNT(*) 
 					FROM course_service.modulos m 
-					WHERE m.curso_id = i.curso_id AND m.ativo = true
+					WHERE m.curso_id = i.curso_id
 				) as total_modulos,
 				(
 					SELECT AVG(t.nota_obtida) 

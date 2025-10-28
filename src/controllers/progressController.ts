@@ -126,3 +126,70 @@ export async function listModuleProgressHandler(req:Request,res:Response,next:Ne
     next(e);
   }
 }
+
+// Novo: Listar inscrições por curso
+export async function listInscricoesCursoHandler(req:Request,res:Response,next:NextFunction){
+  try {
+    const { curso_id } = req.query;
+    
+    if (!curso_id || typeof curso_id !== 'string') {
+      return res.status(400).json({ 
+        erro: 'curso_id_ausente', 
+        mensagem: 'Parâmetro curso_id é obrigatório' 
+      });
+    }
+    
+    const { withClient } = await import('../db.js');
+    
+    const inscricoes = await withClient(async c => {
+      const result = await c.query(`
+        SELECT 
+          i.id,
+          i.curso_id,
+          i.funcionario_id,
+          i.data_inscricao,
+          i.data_conclusao,
+          i.progresso_percentual,
+          i.status,
+          f.nome as funcionario_nome,
+          f.email as funcionario_email,
+          (SELECT COUNT(*) FROM progress_service.progresso_modulos pm 
+           WHERE pm.inscricao_id = i.id AND pm.concluido = true) as modulos_completos,
+          (SELECT COUNT(*) FROM course_service.modulos m 
+           WHERE m.curso_id = i.curso_id) as total_modulos,
+          (SELECT AVG(t.nota_obtida) FROM assessment_service.tentativas t
+           JOIN assessment_service.avaliacoes a ON t.avaliacao_id = a.codigo
+           WHERE a.curso_id = i.curso_id AND t.funcionario_id = i.funcionario_id
+           AND t.status IN ('APROVADO', 'REPROVADO')) as nota_media
+        FROM progress_service.inscricoes i
+        LEFT JOIN user_service.funcionarios f ON f.id = i.funcionario_id
+        WHERE i.curso_id = $1
+        ORDER BY i.data_inscricao DESC
+      `, [curso_id]);
+      
+      return result.rows.map(row => ({
+        id: row.id,
+        funcionario: {
+          id: row.funcionario_id,
+          nome: row.funcionario_nome,
+          email: row.funcionario_email
+        },
+        progresso: Number(row.progresso_percentual) || 0,
+        status: row.status,
+        data_inscricao: row.data_inscricao,
+        data_conclusao: row.data_conclusao,
+        modulos_completos: parseInt(row.modulos_completos) || 0,
+        total_modulos: parseInt(row.total_modulos) || 0,
+        nota_media: row.nota_media ? parseFloat(row.nota_media) : null
+      }));
+    });
+    
+    res.json({
+      items: inscricoes,
+      total: inscricoes.length,
+      mensagem: 'Inscrições do curso listadas com sucesso'
+    });
+  } catch(e){
+    next(e);
+  }
+}

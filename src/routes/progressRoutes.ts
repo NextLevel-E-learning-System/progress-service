@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { withClient } from '../db.js';
-import { createInscricaoHandler, patchProgressoHandler, completeModuleHandler, listInscricoesUsuarioHandler, startModuleHandler, completeModuleNewHandler, listModuleProgressHandler } from '../controllers/progressController.js';
+import { createInscricaoHandler, patchProgressoHandler, completeModuleHandler, listInscricoesUsuarioHandler, startModuleHandler, completeModuleNewHandler, listModuleProgressHandler, listInscricoesCursoHandler } from '../controllers/progressController.js';
 import { listCertificatesHandler, issueCertificateHandler, certificatePdfHandler } from '../controllers/certificateController.js';
 import { listTracksHandler, userTrackProgressHandler } from '../controllers/trackController.js';
 export const progressRouter = Router();
 
 progressRouter.post('/inscricoes', createInscricaoHandler); 
+progressRouter.get('/inscricoes', listInscricoesCursoHandler); // NOVO: Listar por curso
 progressRouter.get('/inscricoes/usuario/:userId', listInscricoesUsuarioHandler);
 progressRouter.patch('/inscricoes/:id/progresso', patchProgressoHandler);
 

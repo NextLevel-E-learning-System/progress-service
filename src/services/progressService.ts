@@ -74,7 +74,6 @@ export async function listCourseEnrollmentsService(cursoId: string) {
 				i.data_conclusao,
 				f.nome as funcionario_nome,
 				f.email as funcionario_email,
-				f.avatar as funcionario_avatar,
 				COUNT(DISTINCT pm.id) FILTER (WHERE pm.data_conclusao IS NOT NULL) as modulos_completos,
 				(
 					SELECT COUNT(*) 
@@ -94,7 +93,7 @@ export async function listCourseEnrollmentsService(cursoId: string) {
 			LEFT JOIN progress_service.progresso_modulos pm ON pm.inscricao_id = i.id
 			WHERE i.curso_id = $1
 			GROUP BY i.id, i.funcionario_id, i.progresso_percentual, i.status, 
-					 i.data_inscricao, i.data_conclusao, f.nome, f.email, f.avatar
+					 i.data_inscricao, i.data_conclusao, f.nome, f.email
 			ORDER BY i.data_inscricao DESC
 		`, [cursoId]);
 		
@@ -103,8 +102,7 @@ export async function listCourseEnrollmentsService(cursoId: string) {
 			funcionario: {
 				id: row.funcionario_id,
 				nome: row.funcionario_nome,
-				email: row.funcionario_email,
-				avatar: row.funcionario_avatar || undefined
+				email: row.funcionario_email
 			},
 			progresso: Number(row.progresso),
 			status: row.status,

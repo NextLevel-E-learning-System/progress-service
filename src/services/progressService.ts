@@ -60,6 +60,63 @@ export async function listModuleProgressService(inscricaoId: string) {
 	return progress;
 }
 
+export async function listCourseEnrollmentsService(cursoId: string) {
+	const { withClient } = await import('../db.js');
+	
+	return withClient(async (client) => {
+		const result = await client.query(`
+			SELECT 
+				i.id,
+				i.funcionario_id,
+				i.progresso_percentual as progresso,
+				i.status,
+				i.data_inscricao,
+				i.data_conclusao,
+				f.nome as funcionario_nome,
+				f.email as funcionario_email,
+				f.avatar as funcionario_avatar,
+				COUNT(DISTINCT pm.id) FILTER (WHERE pm.data_conclusao IS NOT NULL) as modulos_completos,
+				(
+					SELECT COUNT(*) 
+					FROM course_service.modulos m 
+					WHERE m.curso_id = i.curso_id AND m.ativo = true
+				) as total_modulos,
+				(
+					SELECT AVG(t.nota_obtida) 
+					FROM assessment_service.tentativas t
+					JOIN assessment_service.avaliacoes a ON a.codigo = t.avaliacao_id
+					WHERE t.funcionario_id = i.funcionario_id 
+					AND a.curso_id = i.curso_id
+					AND t.status IN ('APROVADO', 'REPROVADO')
+				) as nota_media
+			FROM progress_service.inscricoes i
+			LEFT JOIN user_service.funcionarios f ON f.id = i.funcionario_id
+			LEFT JOIN progress_service.progresso_modulos pm ON pm.inscricao_id = i.id
+			WHERE i.curso_id = $1
+			GROUP BY i.id, i.funcionario_id, i.progresso_percentual, i.status, 
+					 i.data_inscricao, i.data_conclusao, f.nome, f.email, f.avatar
+			ORDER BY i.data_inscricao DESC
+		`, [cursoId]);
+		
+		return result.rows.map(row => ({
+			id: row.id,
+			funcionario: {
+				id: row.funcionario_id,
+				nome: row.funcionario_nome,
+				email: row.funcionario_email,
+				avatar: row.funcionario_avatar || undefined
+			},
+			progresso: Number(row.progresso),
+			status: row.status,
+			data_inscricao: row.data_inscricao,
+			data_conclusao: row.data_conclusao || undefined,
+			modulos_completos: Number(row.modulos_completos),
+			total_modulos: Number(row.total_modulos),
+			nota_media: row.nota_media ? Number(row.nota_media) : undefined
+		}));
+	});
+}
+
 export async function startModuleService(inscricaoId: string, moduloId: string) {
 	const result = await startModule(inscricaoId, moduloId);
 	if (!result) {

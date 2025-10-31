@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'crypto';
 import { withClient } from '../db.js';
 
 export interface Certificate {
-	id: string;
+	id: number;
 	funcionario_id: string;
 	curso_id: string;
 	codigo_certificado: string;
@@ -41,8 +41,8 @@ export async function issueCertificate(_enrollmentId:string, userId:string, cour
 		const codigo = generateCode();
 		const hash_validacao = generateHash(codigo, userId, courseId);
 		const r = await c.query(`insert into progress_service.certificados
-				(id, funcionario_id, curso_id, codigo_certificado, data_emissao, hash_validacao, storage_key)
-				values (gen_random_uuid(), $1,$2,$3, now(), $4, null)
+				(funcionario_id, curso_id, codigo_certificado, data_emissao, hash_validacao, storage_key)
+				values ($1,$2,$3, now(), $4, null)
 				returning id, funcionario_id, curso_id, codigo_certificado, data_emissao, hash_validacao, storage_key`,[userId, courseId, codigo, hash_validacao]);
 		return r.rows[0];
 	});

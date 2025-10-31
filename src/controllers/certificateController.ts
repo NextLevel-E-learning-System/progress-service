@@ -47,22 +47,28 @@ export async function certificatePdfHandler(req:Request,res:Response){
 		localidade: 'Curitiba - PR, Brasil'
 	});
 	
-	// Gerar storage_key seguindo padrão: {env}/certificates/codigo.pdf
-	const envPrefix = process.env.STORAGE_ENV_PREFIX || 'dev';
+	// Gerar storage_key seguindo padrão: certificates/codigo.pdf
+	// O uploadObject vai adicionar o prefixo de ambiente automaticamente
 	let key = cert.storage_key;
 	const bucket = process.env.STORAGE_BUCKET_CERTIFICADOS || 'nextlevel-elearning-prod';
 	
 	if(!key){
-		key = `${envPrefix}/certificates/${cert.codigo_certificado}.pdf`;
+		// NÃO incluir o envPrefix aqui - o uploadObject adiciona automaticamente!
+		key = `certificates/${cert.codigo_certificado}.pdf`;
 		console.log(`📤 [certificatePdfHandler] Fazendo upload do certificado para S3...`);
 		console.log(`   Bucket: ${bucket}`);
-		console.log(`   Key: ${key}`);
+		console.log(`   Key (sem prefixo): ${key}`);
 		
-		await uploadObject({ bucket, key, body: pdf, contentType: 'application/pdf' });
+		const uploadResult = await uploadObject({ bucket, key, body: pdf, contentType: 'application/pdf' });
 		console.log(`✅ [certificatePdfHandler] Upload concluído com sucesso!`);
+		console.log(`   Key final (com prefixo): ${uploadResult.key}`);
 		
-		await withClient(c=>c.query('update progress_service.certificados set storage_key=$2 where id=$1',[cert.id, key]));
-		console.log(`💾 [certificatePdfHandler] storage_key salvo no banco de dados`);
+		// Salvar a key COM o prefixo de ambiente que foi retornada pelo uploadObject
+		await withClient(c=>c.query('update progress_service.certificados set storage_key=$2 where id=$1',[cert.id, uploadResult.key]));
+		console.log(`💾 [certificatePdfHandler] storage_key salvo no banco de dados: ${uploadResult.key}`);
+		
+		// Atualizar a variável key para o presign usar a key correta
+		key = uploadResult.key;
 	} else {
 		console.log(`♻️ [certificatePdfHandler] Certificado já existe no storage: ${key}`);
 	}

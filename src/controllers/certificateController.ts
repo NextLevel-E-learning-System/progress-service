@@ -44,7 +44,7 @@ export async function certificatePdfHandler(req:Request,res:Response){
 		instrutor: nomeInstrutor,
 		cargaHoraria,
 		dataConclusao: cert.data_emissao.toString(),
-		localidade: 'São Paulo, Brasil'
+		localidade: 'Curitiba - PR, Brasil'
 	});
 	
 	// Gerar storage_key seguindo padrão: {env}/certificates/codigo.pdf
@@ -54,10 +54,29 @@ export async function certificatePdfHandler(req:Request,res:Response){
 	
 	if(!key){
 		key = `${envPrefix}/certificates/${cert.codigo_certificado}.pdf`;
-		await uploadObject(bucket, key, pdf, 'application/pdf');
+		console.log(`📤 [certificatePdfHandler] Fazendo upload do certificado para S3...`);
+		console.log(`   Bucket: ${bucket}`);
+		console.log(`   Key: ${key}`);
+		
+		await uploadObject({ bucket, key, body: pdf, contentType: 'application/pdf' });
+		console.log(`✅ [certificatePdfHandler] Upload concluído com sucesso!`);
+		
 		await withClient(c=>c.query('update progress_service.certificados set storage_key=$2 where id=$1',[cert.id, key]));
+		console.log(`💾 [certificatePdfHandler] storage_key salvo no banco de dados`);
+	} else {
+		console.log(`♻️ [certificatePdfHandler] Certificado já existe no storage: ${key}`);
 	}
 	
+	console.log(`🔐 [certificatePdfHandler] Gerando presigned URL...`);
 	const signed = await presign(bucket, key, 300);
+	
+	if (!signed) {
+		console.error(`❌ [certificatePdfHandler] Falha ao gerar presigned URL!`);
+		console.error(`   Bucket: ${bucket}`);
+		console.error(`   Key: ${key}`);
+	} else {
+		console.log(`✅ [certificatePdfHandler] Presigned URL gerado com sucesso`);
+	}
+	
 	return res.json({ downloadUrl: signed, key, codigo: cert.codigo_certificado, mensagem: 'PDF gerado com sucesso' });
 }

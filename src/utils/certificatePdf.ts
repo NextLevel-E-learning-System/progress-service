@@ -81,7 +81,7 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
   
   
   // ========== TÍTULO DO CERTIFICADO ==========
-  doc.moveDown(1.5);
+  doc.moveDown(1);
   doc.fontSize(36)
      .fillColor('#4A90E2')
      .font('Helvetica-Bold')
@@ -96,7 +96,7 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
      .stroke();
   
   // ========== CORPO DO CERTIFICADO ==========
-  doc.moveDown(2);
+  doc.moveDown(1);
   
   // Texto do certificado em uma linha fluída com negrito apenas nas informações
   const textoInicio = 'Certificamos que ';
@@ -113,7 +113,7 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
   doc.fontSize(16)
      .fillColor('#2C3E50')
      .font('Helvetica')
-     .text(textoInicio, margemLateral, doc.y, { continued: true, width: larguraDisponivel, align: 'center' });
+     .text(textoInicio, { continued: true });
   
   doc.font('Helvetica-Bold')
      .fillColor('#000000')
@@ -124,7 +124,7 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
      .text(textoMeio, { continued: true });
   
   doc.font('Helvetica-Bold')
-     .fillColor('#4A90E2')
+     .fillColor('#000000')
      .text(opts.tituloCurso, { continued: opts.cargaHoraria ? true : false });
   
   if (opts.cargaHoraria) {
@@ -155,14 +155,7 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
   
   doc.moveDown(2);
   
-  // ========== LOCALIDADE (CENTRALIZADA) ==========
-  doc.fontSize(12)
-     .fillColor('#34495E')
-     .font('Helvetica')
-     .text(localidade, { align: 'center' });
-  
-  doc.moveDown(2);
-  
+
   // ========== DATA DE EMISSÃO (CENTRALIZADA E ACIMA) ==========
   doc.fontSize(12)
      .fillColor('#2C3E50')
@@ -210,7 +203,6 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
      .text(
        `Certificado gerado digitalmente e autenticado via blockchain. Hash de validação: ${opts.hashValidacao.slice(0, 32)}...`, 
        80, 
-       doc.page.height - 50, 
        { width: doc.page.width - 300, align: 'left' }
      );
   
@@ -218,7 +210,6 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
      .text(
        `Este documento pode ser validado em: https://validar.nextlevel.com.br`, 
        80, 
-       doc.page.height - 35, 
        { width: doc.page.width - 160, align: 'left' }
      );
   

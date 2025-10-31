@@ -71,7 +71,7 @@ export async function certificatePdfHandler(req:Request,res:Response){
 		cargaHoraria,
 		// USAR DATA DE CONCLUSÃO DO CURSO, NÃO DATA DE EMISSÃO DO CERTIFICADO!
 		dataConclusao: inscricao?.data_conclusao?.toString() || cert.data_emissao.toString(),
-		localidade: 'Curitiba - PR, Brasil'
+		localidade: 'Curitiba'
 	};
 	console.log(`   Opções do PDF:`, JSON.stringify(pdfOptions, null, 2));
 	

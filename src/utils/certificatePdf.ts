@@ -96,7 +96,7 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
      .stroke();
   
   // ========== CORPO DO CERTIFICADO ==========
-  doc.moveDown(1);
+  doc.moveDown(2);
   
   // Texto do certificado em uma linha fluída com negrito apenas nas informações
   const textoInicio = 'Certificamos que ';
@@ -106,39 +106,46 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
     : ' no dia ';
   const textoData = ` horas no dia `;
   
-  // Calcular largura do texto para centralizar
-  const margemLateral = 100;
+  // Calcular largura do texto
+  const margemLateral = 80;
   const larguraDisponivel = doc.page.width - (margemLateral * 2);
   
-  doc.fontSize(16)
+  // Usar fontSize para calcular posição Y atual
+  const currentY = doc.y;
+  
+  doc.fontSize(14)
      .fillColor('#2C3E50')
      .font('Helvetica')
-     .text(textoInicio, { continued: true });
+     .text(textoInicio, margemLateral, currentY, { 
+       continued: true, 
+       width: larguraDisponivel,
+       lineBreak: false
+     });
   
   doc.font('Helvetica-Bold')
      .fillColor('#000000')
-     .text(opts.nomeUsuario.toUpperCase(), { continued: true });
+     .text(opts.nomeUsuario.toUpperCase(), { continued: true, lineBreak: false });
   
   doc.font('Helvetica')
      .fillColor('#2C3E50')
-     .text(textoMeio, { continued: true });
+     .text(textoMeio, { continued: true, lineBreak: false });
   
   doc.font('Helvetica-Bold')
-     .fillColor('#000000')
-     .text(opts.tituloCurso, { continued: opts.cargaHoraria ? true : false });
+     .fillColor('#4A90E2')
+     .text(opts.tituloCurso, { continued: true, lineBreak: false });
   
   if (opts.cargaHoraria) {
     doc.font('Helvetica')
        .fillColor('#2C3E50')
-       .text(textoFim, { continued: true });
+       .text(textoFim, { continued: true, lineBreak: false });
     
     doc.font('Helvetica-Bold')
        .fillColor('#000000')
-       .text(opts.cargaHoraria.toString(), { continued: true });
+       .text(opts.cargaHoraria.toString(), { continued: true, lineBreak: false });
     
     doc.font('Helvetica')
        .fillColor('#2C3E50')
-       .text(textoData, { continued: true });
+       .text(textoData, { continued: true, lineBreak: false });
     
     doc.font('Helvetica-Bold')
        .fillColor('#000000')
@@ -146,7 +153,7 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
   } else {
     doc.font('Helvetica')
        .fillColor('#2C3E50')
-       .text(textoFim, { continued: true });
+       .text(textoFim, { continued: true, lineBreak: false });
     
     doc.font('Helvetica-Bold')
        .fillColor('#000000')

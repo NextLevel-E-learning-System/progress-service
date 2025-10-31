@@ -26,6 +26,7 @@ export async function certificatePdfHandler(req:Request,res:Response){
 	const curso = await getCourse(cert.curso_id);
 	const nomeUsuario = usuario?.nome || 'Funcionário';
 	const tituloCurso = curso?.titulo || 'Curso';
+	const cargaHoraria = curso?.duracao_estimada || undefined;
 	
 	// Buscar nome do instrutor se existir instrutor_id no curso
 	let nomeInstrutor = 'Instrutor NextLevel';
@@ -40,7 +41,10 @@ export async function certificatePdfHandler(req:Request,res:Response){
 		codigoCertificado: cert.codigo_certificado,
 		hashValidacao: cert.hash_validacao,
 		empresa: 'NextLevel E-Learning',
-		instrutor: nomeInstrutor
+		instrutor: nomeInstrutor,
+		cargaHoraria,
+		dataConclusao: cert.data_emissao.toString(),
+		localidade: 'São Paulo, Brasil'
 	});
 	
 	// Gerar storage_key seguindo padrão: {env}/certificates/codigo.pdf

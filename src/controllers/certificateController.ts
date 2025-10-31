@@ -29,8 +29,12 @@ export async function certificatePdfHandler(req:Request,res:Response){
 	const usuario = await getUser(cert.funcionario_id);
 	console.log(`   👤 Usuário encontrado:`, usuario);
 	
-	const curso = await getCourse(cert.curso_id);
-	console.log(`   📚 Curso encontrado:`, curso);
+	const cursoResponse = await getCourse(cert.curso_id);
+	console.log(`   📚 Curso Response:`, cursoResponse);
+	
+	// O course-service retorna { curso: {...} } então precisamos acessar .curso
+	const curso = cursoResponse?.curso || cursoResponse;
+	console.log(`   📚 Curso (extraído):`, curso);
 	
 	const nomeUsuario = usuario?.nome || 'Funcionário';
 	const tituloCurso = curso?.titulo || 'Curso';
@@ -40,10 +44,14 @@ export async function certificatePdfHandler(req:Request,res:Response){
 	console.log(`   ✅ Título Curso: ${tituloCurso}`);
 	console.log(`   ✅ Carga Horária: ${cargaHoraria || 'N/A'}`);
 	
-	// Buscar nome do instrutor se existir instrutor_id no curso
+	// Buscar nome do instrutor - primeiro tenta instrutor_nome, depois busca pelo ID
 	let nomeInstrutor = 'Instrutor NextLevel';
-	if (curso?.instrutor_id) {
-		console.log(`   🎓 Buscando instrutor: ${curso.instrutor_id}`);
+	
+	if (curso?.instrutor_nome) {
+		console.log(`   👨‍🏫 Instrutor encontrado no curso: ${curso.instrutor_nome}`);
+		nomeInstrutor = curso.instrutor_nome;
+	} else if (curso?.instrutor_id) {
+		console.log(`   🎓 Buscando instrutor por ID: ${curso.instrutor_id}`);
 		const instrutor = await getUser(curso.instrutor_id);
 		console.log(`   👨‍🏫 Instrutor encontrado:`, instrutor);
 		nomeInstrutor = instrutor?.nome || nomeInstrutor;

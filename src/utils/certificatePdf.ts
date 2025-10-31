@@ -98,67 +98,26 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
   // ========== CORPO DO CERTIFICADO ==========
   doc.moveDown(2);
   
-  // Texto do certificado em uma linha fluída com negrito apenas nas informações
-  const textoInicio = 'Certificamos que ';
-  const textoMeio = ' concluiu o curso ';
-  const textoFim = opts.cargaHoraria 
-    ? `, com carga horária de ` 
-    : ' no dia ';
-  const textoData = ` horas no dia `;
-  
-  // Calcular largura do texto
+  // Texto do certificado - vamos usar um parágrafo simples
   const margemLateral = 80;
   const larguraDisponivel = doc.page.width - (margemLateral * 2);
   
-  // Usar fontSize para calcular posição Y atual
-  const currentY = doc.y;
+  // Construir o texto completo
+  let textoCompleto = `Certificamos que ${opts.nomeUsuario.toUpperCase()} concluiu o curso ${opts.tituloCurso}`;
+  
+  if (opts.cargaHoraria) {
+    textoCompleto += `, com carga horária de ${opts.cargaHoraria} horas no dia ${dataConclusao}.`;
+  } else {
+    textoCompleto += ` no dia ${dataConclusao}.`;
+  }
   
   doc.fontSize(14)
      .fillColor('#2C3E50')
      .font('Helvetica')
-     .text(textoInicio, margemLateral, currentY, { 
-       continued: true, 
+     .text(textoCompleto, margemLateral, doc.y, { 
        width: larguraDisponivel,
-       lineBreak: false
+       align: 'justify'
      });
-  
-  doc.font('Helvetica-Bold')
-     .fillColor('#000000')
-     .text(opts.nomeUsuario.toUpperCase(), { continued: true, lineBreak: false });
-  
-  doc.font('Helvetica')
-     .fillColor('#2C3E50')
-     .text(textoMeio, { continued: true, lineBreak: false });
-  
-  doc.font('Helvetica-Bold')
-     .fillColor('#4A90E2')
-     .text(opts.tituloCurso, { continued: true, lineBreak: false });
-  
-  if (opts.cargaHoraria) {
-    doc.font('Helvetica')
-       .fillColor('#2C3E50')
-       .text(textoFim, { continued: true, lineBreak: false });
-    
-    doc.font('Helvetica-Bold')
-       .fillColor('#000000')
-       .text(opts.cargaHoraria.toString(), { continued: true, lineBreak: false });
-    
-    doc.font('Helvetica')
-       .fillColor('#2C3E50')
-       .text(textoData, { continued: true, lineBreak: false });
-    
-    doc.font('Helvetica-Bold')
-       .fillColor('#000000')
-       .text(dataConclusao, { continued: false });
-  } else {
-    doc.font('Helvetica')
-       .fillColor('#2C3E50')
-       .text(textoFim, { continued: true, lineBreak: false });
-    
-    doc.font('Helvetica-Bold')
-       .fillColor('#000000')
-       .text(dataConclusao, { continued: false });
-  }
   
   doc.moveDown(2);
   

@@ -54,7 +54,16 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
       year: 'numeric' 
     });
     
-    console.log(`   📅 Data formatada: ${dataConclusao}`);
+    // Data de emissão do certificado (data atual)
+    const dataEmissao = new Date();
+    const cidade = localidade.split(',')[0].trim() || 'Curitiba';
+    const diaEmissao = dataEmissao.getDate();
+    const mesEmissao = dataEmissao.toLocaleDateString('pt-BR', { month: 'long' });
+    const anoEmissao = dataEmissao.getFullYear();
+    const dataEmissaoFormatada = `${cidade}, ${diaEmissao} de ${mesEmissao} de ${anoEmissao}`;
+    
+    console.log(`   📅 Data conclusão formatada: ${dataConclusao}`);
+    console.log(`   📅 Data emissão formatada: ${dataEmissaoFormatada}`);
   
   // ========== BORDA DECORATIVA ==========
   doc.lineWidth(3);
@@ -70,10 +79,6 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
      .font('Helvetica-Bold')
      .text(empresa, { align: 'center' });
   
-  doc.fontSize(10)
-     .fillColor('#7F8C8D')
-     .font('Helvetica')
-     .text('Plataforma de Educação Corporativa', { align: 'center' });
   
   // ========== TÍTULO DO CERTIFICADO ==========
   doc.moveDown(1.5);
@@ -92,95 +97,111 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
   
   // ========== CORPO DO CERTIFICADO ==========
   doc.moveDown(2);
-  doc.fontSize(14)
+  
+  // Texto do certificado em uma linha fluída com negrito apenas nas informações
+  const textoInicio = 'Certificamos que ';
+  const textoMeio = ' concluiu o curso ';
+  const textoFim = opts.cargaHoraria 
+    ? `, com carga horária de ` 
+    : ' no dia ';
+  const textoData = ` horas no dia `;
+  
+  // Calcular largura do texto para centralizar
+  const margemLateral = 100;
+  const larguraDisponivel = doc.page.width - (margemLateral * 2);
+  
+  doc.fontSize(16)
      .fillColor('#2C3E50')
      .font('Helvetica')
-     .text('Certificamos que', { align: 'center' });
+     .text(textoInicio, margemLateral, doc.y, { continued: true, width: larguraDisponivel, align: 'center' });
   
-  doc.moveDown(0.5);
-  doc.fontSize(24)
+  doc.font('Helvetica-Bold')
      .fillColor('#000000')
-     .font('Helvetica-Bold')
-     .text(opts.nomeUsuario, { align: 'center', underline: true });
+     .text(opts.nomeUsuario.toUpperCase(), { continued: true });
   
-  doc.moveDown(1);
-  doc.fontSize(14)
+  doc.font('Helvetica')
      .fillColor('#2C3E50')
-     .font('Helvetica')
-     .text('concluiu com êxito o curso', { align: 'center' });
+     .text(textoMeio, { continued: true });
   
-  doc.moveDown(0.5);
-  doc.fontSize(20)
+  doc.font('Helvetica-Bold')
      .fillColor('#4A90E2')
-     .font('Helvetica-Bold')
-     .text(opts.tituloCurso, { align: 'center' });
+     .text(opts.tituloCurso, { continued: opts.cargaHoraria ? true : false });
   
-  // ========== INFORMAÇÕES DO CURSO ==========
-  doc.moveDown(1.5);
-  const infoY = doc.y;
-  const leftX = 120;
-  const centerX = doc.page.width / 2;
-  const rightX = doc.page.width - 220;
-  
-  doc.fontSize(11)
-     .fillColor('#34495E')
-     .font('Helvetica');
-  
-  // Carga Horária (esquerda)
   if (opts.cargaHoraria) {
-    doc.text('Carga Horária:', leftX, infoY, { continued: false, width: 150 });
+    doc.font('Helvetica')
+       .fillColor('#2C3E50')
+       .text(textoFim, { continued: true });
+    
     doc.font('Helvetica-Bold')
-       .text(`${opts.cargaHoraria} horas`, leftX, infoY + 15, { width: 150 });
+       .fillColor('#000000')
+       .text(opts.cargaHoraria.toString(), { continued: true });
+    
+    doc.font('Helvetica')
+       .fillColor('#2C3E50')
+       .text(textoData, { continued: true });
+    
+    doc.font('Helvetica-Bold')
+       .fillColor('#000000')
+       .text(dataConclusao, { continued: false });
+  } else {
+    doc.font('Helvetica')
+       .fillColor('#2C3E50')
+       .text(textoFim, { continued: true });
+    
+    doc.font('Helvetica-Bold')
+       .fillColor('#000000')
+       .text(dataConclusao, { continued: false });
   }
   
-  // Data de Conclusão (centro)
-  doc.font('Helvetica')
-     .text('Data de Conclusão:', centerX - 75, infoY, { continued: false, width: 150 });
-  doc.font('Helvetica-Bold')
-     .text(dataConclusao, centerX - 75, infoY + 15, { width: 150, align: 'center' });
+  doc.moveDown(2);
   
-  // Localidade (direita)
-  doc.font('Helvetica')
-     .text('Localidade:', rightX, infoY, { continued: false, width: 150 });
-  doc.font('Helvetica-Bold')
-     .text(localidade, rightX, infoY + 15, { width: 150 });
+  // ========== LOCALIDADE (CENTRALIZADA) ==========
+  doc.fontSize(12)
+     .fillColor('#34495E')
+     .font('Helvetica')
+     .text(localidade, { align: 'center' });
   
-  // ========== QR CODE E AUTENTICAÇÃO ==========
-  // Posicionado mais abaixo para não sobrepor a localidade
-  const qrX = doc.page.width - 180;
-  const qrY = doc.page.height - 180;  // Aumentado de 200 para 180
-  doc.image(qrPng, qrX, qrY, { width: 100 });
+  doc.moveDown(2);
+  
+  // ========== DATA DE EMISSÃO (CENTRALIZADA E ACIMA) ==========
+  doc.fontSize(12)
+     .fillColor('#2C3E50')
+     .font('Helvetica-Bold')
+     .text(dataEmissaoFormatada, { align: 'center' });
+  
+  doc.moveDown(3);
+  
+  // ========== LINHA COM INSTRUTOR E QR CODE ==========
+  const baseY = doc.page.height - 160;
+  
+  // INSTRUTOR (esquerda)
+  const sigX = 120;
+  const sigWidth = 250;
+  
+  doc.fontSize(14)
+     .fillColor('#2C3E50')
+     .font('Helvetica-Bold')
+     .text(opts.instrutor || 'Instrutor Responsável', sigX, baseY, { width: sigWidth, align: 'center' });
+  
+  doc.fontSize(10)
+     .fillColor('#7F8C8D')
+     .font('Helvetica')
+     .text('INSTRUTOR', sigX, baseY + 20, { width: sigWidth, align: 'center' });
+  
+  // QR CODE (direita)
+  const qrX = doc.page.width - 200;
+  const qrSize = 100;
+  
+  doc.image(qrPng, qrX, baseY - 20, { width: qrSize });
   
   doc.fontSize(8)
      .fillColor('#7F8C8D')
      .font('Helvetica')
-     .text('Autenticação:', qrX, qrY + 105, { width: 100, align: 'center' });
+     .text('Autenticação:', qrX, baseY + qrSize - 15, { width: qrSize, align: 'center' });
   
   doc.fontSize(7)
      .font('Helvetica-Bold')
-     .text(opts.codigoCertificado, qrX, qrY + 118, { width: 100, align: 'center' });
-  
-  // ========== ASSINATURA ==========
-  const sigY = doc.page.height - 150;
-  const sigX = 150;
-  
-  // Linha da assinatura
-  doc.moveTo(sigX, sigY)
-     .lineTo(sigX + 200, sigY)
-     .lineWidth(1)
-     .strokeColor('#2C3E50')
-     .stroke();
-  
-  doc.moveDown(8);
-  doc.fontSize(12)
-     .fillColor('#2C3E50')
-     .font('Helvetica-Bold')
-     .text(opts.instrutor || 'Instrutor Responsável', sigX, sigY + 10, { width: 200, align: 'center' });
-  
-  doc.fontSize(9)
-     .fillColor('#7F8C8D')
-     .font('Helvetica-Oblique')
-     .text('Instrutor(a) do Curso', sigX, sigY + 28, { width: 200, align: 'center' });
+     .text(opts.codigoCertificado, qrX, baseY + qrSize - 2, { width: qrSize, align: 'center' });
   
   // ========== RODAPÉ COM HASH ==========
   doc.fontSize(7)

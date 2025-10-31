@@ -102,31 +102,44 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
   // Definir posição Y manualmente após a linha
   const bodyY = lineY + 40;
   console.log(`   📍 bodyY: ${bodyY}`);
-  console.log(`   📍 margemLateral: 80`);
   
-  // Texto do certificado - vamos usar um parágrafo simples
-  const margemLateral = 120;
+  // Texto do certificado com variáveis em negrito
+  const margemLateral = 90;
   const larguraDisponivel = doc.page.width - (margemLateral * 2);
   console.log(`   📍 larguraDisponivel: ${larguraDisponivel}`);
   
-  // Construir o texto completo
-  let textoCompleto = `Certificamos que ${opts.nomeUsuario.toUpperCase()} concluiu o curso ${opts.tituloCurso}`;
+  doc.fontSize(14)
+     .fillColor('#2C3E50');
+  
+  // Texto com partes em negrito
+  doc.font('Helvetica')
+     .text('Certificamos que ', margemLateral, bodyY, { 
+       width: larguraDisponivel,
+       align: 'justify',
+       continued: true
+     })
+     .font('Helvetica-Bold')
+     .text(opts.nomeUsuario.toUpperCase(), { continued: true })
+     .font('Helvetica')
+     .text(' concluiu o curso ', { continued: true })
+     .font('Helvetica-Bold')
+     .text(opts.tituloCurso, { continued: true });
   
   if (opts.cargaHoraria) {
-    textoCompleto += `, com carga horária de ${opts.cargaHoraria} horas no dia ${dataConclusao}.`;
+    doc.font('Helvetica')
+       .text(', com carga horária de ', { continued: true })
+       .font('Helvetica-Bold')
+       .text(`${opts.cargaHoraria} horas `, { continued: true })
+       .font('Helvetica')
+       .text('no dia ', { continued: true })
+       .font('Helvetica-Bold')
+       .text(`${dataConclusao}.`, { continued: false });
   } else {
-    textoCompleto += ` no dia ${dataConclusao}.`;
+    doc.font('Helvetica')
+       .text(' no dia ', { continued: true })
+       .font('Helvetica-Bold')
+       .text(`${dataConclusao}.`, { continued: false });
   }
-  
-  console.log(`   📝 Texto do certificado: ${textoCompleto.substring(0, 50)}...`);
-  
-  doc.fontSize(14)
-     .fillColor('#2C3E50')
-     .font('Helvetica')
-     .text(textoCompleto, margemLateral, bodyY, { 
-       width: larguraDisponivel,
-       align: 'center'
-     });
   
   // ========== DATA DE EMISSÃO (CENTRALIZADA E ACIMA) ==========
   const dataEmissaoY = bodyY + 80; // Posição fixa abaixo do corpo
@@ -173,26 +186,20 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
      .font('Helvetica-Bold')
      .text(opts.codigoCertificado, qrX, baseY + qrSize - 2, { width: qrSize, align: 'center' });
   
-  // ========== RODAPÉ COM HASH ==========
-  const rodapeY = doc.page.height - 10;
+  // ========== RODAPÉ COM HASH (UMA ÚNICA LINHA) ==========
+  const rodapeY = doc.page.height - 30;
   console.log('📍 rodapeY:', rodapeY);
+  
+  const textoRodape = `Certificado gerado digitalmente. Hash: ${opts.hashValidacao.slice(0, 20)}... | Validar em: https://validar.nextlevel.com.br`;
   
   doc.fontSize(7)
      .fillColor('#95A5A6')
      .font('Helvetica')
      .text(
-       `Certificado gerado digitalmente e autenticado via blockchain. Hash de validação: ${opts.hashValidacao.slice(0, 32)}...`, 
+       textoRodape, 
        80,
        rodapeY,
-       { width: doc.page.width - 300, align: 'left' }
-     );
-  
-  doc.fontSize(7)
-     .text(
-       `Este documento pode ser validado em: https://validar.nextlevel.com.br`, 
-       80,
-       rodapeY + 10,
-       { width: doc.page.width - 160, align: 'left' }
+       { width: doc.page.width - 160, align: 'center' }
      );
   
   console.log(`   ✍️ Finalizando documento PDF...`);

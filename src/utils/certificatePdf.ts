@@ -146,8 +146,9 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
      .text(localidade, rightX, infoY + 15, { width: 150 });
   
   // ========== QR CODE E AUTENTICAÇÃO ==========
+  // Posicionado mais abaixo para não sobrepor a localidade
   const qrX = doc.page.width - 180;
-  const qrY = doc.page.height - 200;
+  const qrY = doc.page.height - 180;  // Aumentado de 200 para 180
   doc.image(qrPng, qrX, qrY, { width: 100 });
   
   doc.fontSize(8)

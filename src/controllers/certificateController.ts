@@ -20,11 +20,13 @@ export async function certificatePdfHandler(req:Request,res:Response){
 	const r = await getOrCreateCertificate(req.params.enrollmentId);
 	if('erro' in r) return res.status(r.erro === 'inscricao_nao_encontrada' ? 404 : 409).json(r);
 	const cert = r.certificado;
+	const inscricao = r.inscricao;
 	
 	// Buscar dados reais do usuário, curso e instrutor
 	console.log(`📋 [certificatePdfHandler] Buscando dados para o certificado...`);
 	console.log(`   Funcionário ID: ${cert.funcionario_id}`);
 	console.log(`   Curso ID: ${cert.curso_id}`);
+	console.log(`   Data Conclusão (inscricao): ${inscricao?.data_conclusao}`);
 	
 	const usuario = await getUser(cert.funcionario_id);
 	console.log(`   👤 Usuário encontrado:`, usuario);
@@ -67,7 +69,8 @@ export async function certificatePdfHandler(req:Request,res:Response){
 		empresa: 'NextLevel E-Learning',
 		instrutor: nomeInstrutor,
 		cargaHoraria,
-		dataConclusao: cert.data_emissao.toString(),
+		// USAR DATA DE CONCLUSÃO DO CURSO, NÃO DATA DE EMISSÃO DO CERTIFICADO!
+		dataConclusao: inscricao?.data_conclusao?.toString() || cert.data_emissao.toString(),
 		localidade: 'Curitiba - PR, Brasil'
 	};
 	console.log(`   Opções do PDF:`, JSON.stringify(pdfOptions, null, 2));

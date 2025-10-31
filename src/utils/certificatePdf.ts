@@ -88,7 +88,10 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
      .text('CERTIFICADO DE CONCLUSÃO', { align: 'center' });
   
   // Linha decorativa
-  const lineY = doc.y + 10;
+  const titleY = doc.y;
+  console.log(`   📍 titleY após título: ${titleY}`);
+  const lineY = titleY + 10;
+  console.log(`   📍 lineY: ${lineY}`);
   doc.moveTo(200, lineY)
      .lineTo(doc.page.width - 200, lineY)
      .lineWidth(2)
@@ -96,11 +99,15 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
      .stroke();
   
   // ========== CORPO DO CERTIFICADO ==========
-  doc.moveDown(2);
+  // Definir posição Y manualmente após a linha
+  const bodyY = lineY + 40;
+  console.log(`   📍 bodyY: ${bodyY}`);
+  console.log(`   📍 margemLateral: 80`);
   
   // Texto do certificado - vamos usar um parágrafo simples
-  const margemLateral = 80;
+  const margemLateral = 120;
   const larguraDisponivel = doc.page.width - (margemLateral * 2);
+  console.log(`   📍 larguraDisponivel: ${larguraDisponivel}`);
   
   // Construir o texto completo
   let textoCompleto = `Certificamos que ${opts.nomeUsuario.toUpperCase()} concluiu o curso ${opts.tituloCurso}`;
@@ -111,27 +118,31 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
     textoCompleto += ` no dia ${dataConclusao}.`;
   }
   
+  console.log(`   📝 Texto do certificado: ${textoCompleto.substring(0, 50)}...`);
+  
   doc.fontSize(14)
      .fillColor('#2C3E50')
      .font('Helvetica')
-     .text(textoCompleto, margemLateral, doc.y, { 
+     .text(textoCompleto, margemLateral, bodyY, { 
        width: larguraDisponivel,
-       align: 'justify'
+       align: 'center'
      });
   
-  doc.moveDown(2);
-  
-
   // ========== DATA DE EMISSÃO (CENTRALIZADA E ACIMA) ==========
+  const dataEmissaoY = bodyY + 80; // Posição fixa abaixo do corpo
+  console.log('📍 dataEmissaoY:', dataEmissaoY);
+  
   doc.fontSize(12)
      .fillColor('#2C3E50')
      .font('Helvetica-Bold')
-     .text(dataEmissaoFormatada, { align: 'center' });
-  
-  doc.moveDown(3);
+     .text(dataEmissaoFormatada, margemLateral, dataEmissaoY, { 
+       width: larguraDisponivel, 
+       align: 'center' 
+     });
   
   // ========== LINHA COM INSTRUTOR E QR CODE ==========
-  const baseY = doc.page.height - 160;
+  const baseY = doc.page.height - 190;
+  console.log('📍 baseY (instrutor/QR):', baseY);
   
   // INSTRUTOR (esquerda)
   const sigX = 120;
@@ -163,19 +174,24 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
      .text(opts.codigoCertificado, qrX, baseY + qrSize - 2, { width: qrSize, align: 'center' });
   
   // ========== RODAPÉ COM HASH ==========
+  const rodapeY = doc.page.height - 10;
+  console.log('📍 rodapeY:', rodapeY);
+  
   doc.fontSize(7)
      .fillColor('#95A5A6')
      .font('Helvetica')
      .text(
        `Certificado gerado digitalmente e autenticado via blockchain. Hash de validação: ${opts.hashValidacao.slice(0, 32)}...`, 
-       80, 
+       80,
+       rodapeY,
        { width: doc.page.width - 300, align: 'left' }
      );
   
   doc.fontSize(7)
      .text(
        `Este documento pode ser validado em: https://validar.nextlevel.com.br`, 
-       80, 
+       80,
+       rodapeY + 10,
        { width: doc.page.width - 160, align: 'left' }
      );
   

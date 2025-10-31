@@ -17,29 +17,44 @@ interface PdfOptions {
 }
 
 export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
-  const doc = new PDFDocument({ 
-    size:'A4', 
-    layout: 'landscape', // Certificados normalmente são horizontais
-    margin: 60 
-  });
+  console.log(`🎨 [gerarPdfCertificado] Iniciando geração do PDF...`);
+  console.log(`   Opções recebidas:`, JSON.stringify(opts, null, 2));
   
-  const chunks: Buffer[] = [];
-  doc.on('data', (d: Buffer)=>chunks.push(d));
-  
-  // URLs e dados
-  const qrData = `https://validar.nextlevel.com.br/cert/${opts.codigoCertificado}?hash=${opts.hashValidacao}`;
-  const qrPng = await QRCode.toBuffer(qrData, { margin:1, scale:4 });
-  const empresa = opts.empresa || 'NextLevel E-Learning';
-  const localidade = opts.localidade || 'São Paulo, Brasil';
-  const dataConclusao = opts.dataConclusao ? new Date(opts.dataConclusao).toLocaleDateString('pt-BR', { 
-    day: '2-digit', 
-    month: 'long', 
-    year: 'numeric' 
-  }) : new Date().toLocaleDateString('pt-BR', { 
-    day: '2-digit', 
-    month: 'long', 
-    year: 'numeric' 
-  });
+  try {
+    const doc = new PDFDocument({ 
+      size:'A4', 
+      layout: 'landscape', // Certificados normalmente são horizontais
+      margin: 60 
+    });
+    
+    const chunks: Buffer[] = [];
+    doc.on('data', (d: Buffer)=>chunks.push(d));
+    doc.on('error', (err: Error) => {
+      console.error(`❌ [gerarPdfCertificado] Erro no PDFDocument:`, err);
+    });
+    
+    console.log(`   📄 PDFDocument criado (landscape, A4)`);
+    
+    // URLs e dados
+    const qrData = `https://validar.nextlevel.com.br/cert/${opts.codigoCertificado}?hash=${opts.hashValidacao}`;
+    console.log(`   🔗 QR Code URL: ${qrData}`);
+    
+    const qrPng = await QRCode.toBuffer(qrData, { margin:1, scale:4 });
+    console.log(`   ✅ QR Code gerado (${qrPng.length} bytes)`);
+    
+    const empresa = opts.empresa || 'NextLevel E-Learning';
+    const localidade = opts.localidade || 'São Paulo, Brasil';
+    const dataConclusao = opts.dataConclusao ? new Date(opts.dataConclusao).toLocaleDateString('pt-BR', { 
+      day: '2-digit', 
+      month: 'long', 
+      year: 'numeric' 
+    }) : new Date().toLocaleDateString('pt-BR', { 
+      day: '2-digit', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+    
+    console.log(`   📅 Data formatada: ${dataConclusao}`);
   
   // ========== BORDA DECORATIVA ==========
   doc.lineWidth(3);
@@ -185,7 +200,16 @@ export async function gerarPdfCertificado(opts: PdfOptions): Promise<Buffer>{
        { width: doc.page.width - 160, align: 'left' }
      );
   
+  console.log(`   ✍️ Finalizando documento PDF...`);
   doc.end();
   await new Promise(r=>doc.on('end', r));
-  return Buffer.concat(chunks);
+  
+  const finalBuffer = Buffer.concat(chunks);
+  console.log(`   ✅ PDF gerado com sucesso! Tamanho final: ${finalBuffer.length} bytes`);
+  
+  return finalBuffer;
+  } catch (error) {
+    console.error(`❌ [gerarPdfCertificado] ERRO ao gerar PDF:`, error);
+    throw error;
+  }
 }

@@ -22,20 +22,36 @@ export async function certificatePdfHandler(req:Request,res:Response){
 	const cert = r.certificado;
 	
 	// Buscar dados reais do usuário, curso e instrutor
+	console.log(`📋 [certificatePdfHandler] Buscando dados para o certificado...`);
+	console.log(`   Funcionário ID: ${cert.funcionario_id}`);
+	console.log(`   Curso ID: ${cert.curso_id}`);
+	
 	const usuario = await getUser(cert.funcionario_id);
+	console.log(`   👤 Usuário encontrado:`, usuario);
+	
 	const curso = await getCourse(cert.curso_id);
+	console.log(`   📚 Curso encontrado:`, curso);
+	
 	const nomeUsuario = usuario?.nome || 'Funcionário';
 	const tituloCurso = curso?.titulo || 'Curso';
 	const cargaHoraria = curso?.duracao_estimada || undefined;
 	
+	console.log(`   ✅ Nome Usuário: ${nomeUsuario}`);
+	console.log(`   ✅ Título Curso: ${tituloCurso}`);
+	console.log(`   ✅ Carga Horária: ${cargaHoraria || 'N/A'}`);
+	
 	// Buscar nome do instrutor se existir instrutor_id no curso
 	let nomeInstrutor = 'Instrutor NextLevel';
 	if (curso?.instrutor_id) {
+		console.log(`   🎓 Buscando instrutor: ${curso.instrutor_id}`);
 		const instrutor = await getUser(curso.instrutor_id);
+		console.log(`   👨‍🏫 Instrutor encontrado:`, instrutor);
 		nomeInstrutor = instrutor?.nome || nomeInstrutor;
 	}
+	console.log(`   ✅ Nome Instrutor: ${nomeInstrutor}`);
 	
-	const pdf = await gerarPdfCertificado({
+	console.log(`📄 [certificatePdfHandler] Gerando PDF com os dados...`);
+	const pdfOptions = {
 		tituloCurso,
 		nomeUsuario,
 		codigoCertificado: cert.codigo_certificado,
@@ -45,7 +61,11 @@ export async function certificatePdfHandler(req:Request,res:Response){
 		cargaHoraria,
 		dataConclusao: cert.data_emissao.toString(),
 		localidade: 'Curitiba - PR, Brasil'
-	});
+	};
+	console.log(`   Opções do PDF:`, JSON.stringify(pdfOptions, null, 2));
+	
+	const pdf = await gerarPdfCertificado(pdfOptions);
+	console.log(`   ✅ PDF gerado! Tamanho: ${pdf.length} bytes`);
 	
 	// Gerar storage_key seguindo padrão: certificates/codigo.pdf
 	// O uploadObject vai adicionar o prefixo de ambiente automaticamente

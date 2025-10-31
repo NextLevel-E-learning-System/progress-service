@@ -189,17 +189,25 @@ async function emitCourseCompleted(r: CompleteResult){
 		totalProgress: 100
 	};
 	await publishEvent({ type: 'course.completed.v1', source: 'progress-service', payload });
-	// Emissão automática de certificado (ignora erro para não quebrar fluxo principal)
+	
+	// Emissão automática de certificado
 	try {
+		console.log(`📜 [emitCourseCompleted] Iniciando emissão de certificado para inscricao=${r.inscricao_id}...`);
 		const cert = await issueCertificate(r.inscricao_id, r.funcionario_id, r.curso_id);
+		console.log(`✅ [emitCourseCompleted] Certificado ${cert.codigo_certificado} emitido com sucesso!`);
+		
 		const certEvt: CertificateIssuedPayload = {
 			courseId: r.curso_id,
 			userId: r.funcionario_id,
 			certificateCode: cert.codigo_certificado,
 			issuedAt: (cert.data_emissao instanceof Date ? cert.data_emissao : new Date(cert.data_emissao)).toISOString(),
-			storageKey: cert.storage_key || cert.url_pdf,
+			storageKey: cert.storage_key || null,
 			verificationHashFragment: cert.hash_validacao.slice(0,16)
 		};
 		await publishEvent({ type: 'certificate.issued.v1', source: 'progress-service', payload: certEvt });
-	} catch(e){ /* log futuro */ }
+		console.log(`📤 [emitCourseCompleted] Evento certificate.issued.v1 publicado para certificado ${cert.codigo_certificado}`);
+	} catch(e){ 
+		console.error('❌ [emitCourseCompleted] Erro ao emitir certificado:', e);
+		console.error('❌ [emitCourseCompleted] Stack:', e instanceof Error ? e.stack : 'N/A');
+	}
 }

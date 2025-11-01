@@ -137,30 +137,6 @@ export async function completeModuleNew(inscricaoId: string, moduloId: string) {
 			where inscricao_id=$1 and modulo_id=$2
 		`, [inscricaoId, moduloId, tempoGastoMin]);
 
-		// Atualiza XP do funcionário no user-service
-		if (xpModulo > 0) {
-			const funcionarioAtual = await c.query(`
-				select xp_total from user_service.funcionarios 
-				where id=$1
-			`, [funcionarioId]);
-
-			const xpAtual = Number(funcionarioAtual.rows[0]?.xp_total || 0);
-			const novoXpTotal = xpAtual + xpModulo;
-
-			let nivel = 'Iniciante';
-			if (novoXpTotal >= 3000) {
-				nivel = 'Avançado';
-			} else if (novoXpTotal >= 1000) {
-				nivel = 'Intermediário';
-			}
-
-			await c.query(`
-				update user_service.funcionarios 
-				set xp_total=$1, nivel=$2, atualizado_em=now() 
-				where id=$3
-			`, [novoXpTotal, nivel, funcionarioId]);
-		}
-
 		// Recalcula progresso do curso
 		const totalObrigatorios = await c.query(`
 			select count(*) as total from course_service.modulos 

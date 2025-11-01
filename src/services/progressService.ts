@@ -45,7 +45,6 @@ export async function patchProgresso(id:string, valor:number){
 export async function completeModule(inscricaoId:string, moduloId:string){
 	const r = await completeModuleDb(inscricaoId, moduloId);
 	if(!r) return { erro:'nao_encontrado', mensagem:'Inscrição não encontrada' };
-	await emitModuleCompleted(r);
 	if (r.concluido) await emitCourseCompleted(r);
 	return { resultado: r, mensagem: r.concluido? 'Módulo concluído e curso finalizado' : 'Módulo concluído' };
 }
@@ -144,40 +143,52 @@ export async function completeModuleService(inscricaoId: string, moduloId: strin
 		return { erro: result.erro, mensagem: errorMap[result.erro as keyof typeof errorMap] || 'Erro desconhecido' };
 	}
 	
-	// Emite eventos se necessário
-	const completeResultCompatible: CompleteResult = {
-		inscricao_id: result.inscricao_id,
-		modulo_id: result.modulo_id,
-		progresso_percentual: result.progresso_percentual,
-		concluido: result.curso_concluido,
-		data_conclusao: result.curso_concluido ? new Date() : null,
-		funcionario_id: result.funcionario_id,
-		curso_id: result.curso_id
+	// Publica evento de módulo concluído com XP
+	const modulePayload: ModuleCompletedPayload = {
+		enrollmentId: result.inscricao_id,
+		courseId: result.curso_id,
+		userId: result.funcionario_id,
+		moduleId: result.modulo_id,
+		xpEarned: result.xp_ganho,
+		progressPercent: result.progresso_percentual,
+		completedCourse: result.curso_concluido
 	};
+	await publishEvent({ type: 'progress.module.completed.v1', source: 'progress-service', payload: modulePayload });
 	
+	// Se curso foi concluído, publica evento de curso completo
 	if (result.curso_concluido) {
-		await emitCourseCompleted(completeResultCompatible);
-	} else {
-		await emitModuleCompleted(completeResultCompatible);
+		const coursePayload: CourseCompletedPayload = {
+			enrollmentId: result.inscricao_id,
+			courseId: result.curso_id,
+			userId: result.funcionario_id,
+			totalProgress: 100
+		};
+		await publishEvent({ type: 'progress.course.completed.v1', source: 'progress-service', payload: coursePayload });
+		
+		// Emissão automática de certificado
+		try {
+			console.log(`📜 Iniciando emissão de certificado para inscricao=${result.inscricao_id}...`);
+			const cert = await issueCertificate(result.inscricao_id, result.funcionario_id, result.curso_id);
+			console.log(`✅ Certificado ${cert.codigo_certificado} emitido com sucesso!`);
+			
+			const certEvt: CertificateIssuedPayload = {
+				courseId: result.curso_id,
+				userId: result.funcionario_id,
+				certificateCode: cert.codigo_certificado,
+				issuedAt: (cert.data_emissao instanceof Date ? cert.data_emissao : new Date(cert.data_emissao)).toISOString(),
+				storageKey: cert.storage_key || null,
+				verificationHashFragment: cert.hash_validacao.slice(0, 16)
+			};
+			await publishEvent({ type: 'certificate.issued.v1', source: 'progress-service', payload: certEvt });
+		} catch (e) {
+			console.error('❌ Erro ao emitir certificado:', e);
+		}
 	}
 	
 	return { 
 		resultado: result, 
 		mensagem: result.curso_concluido ? 'Módulo concluído e curso finalizado!' : 'Módulo concluído com sucesso' 
 	};
-}
-
-async function emitModuleCompleted(r: CompleteResult){
-	if(!r.funcionario_id || !r.curso_id) return;
-	const payload: ModuleCompletedPayload = {
-		enrollmentId: r.inscricao_id,
-		courseId: r.curso_id,
-		userId: r.funcionario_id,
-		moduleId: r.modulo_id,
-		progressPercent: r.progresso_percentual,
-		completedCourse: r.concluido
-	};
-	await publishEvent({ type: 'course.module.completed.v1', source: 'progress-service', payload });
 }
 
 async function emitCourseCompleted(r: CompleteResult){

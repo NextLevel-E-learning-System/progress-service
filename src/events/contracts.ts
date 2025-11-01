@@ -14,6 +14,7 @@ export interface ModuleCompletedPayload {
   courseId: string;
   userId: string;
   moduleId: string;
+  xpEarned: number;
   progressPercent: number;
   completedCourse: boolean;
 }

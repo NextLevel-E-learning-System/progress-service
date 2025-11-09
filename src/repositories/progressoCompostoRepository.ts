@@ -3,12 +3,48 @@ import { ProgressoDetalhado, ProximoModulo } from '../types/moduloComposto.js';
 
 /**
  * Busca progresso detalhado de uma inscrição
- * Usa a view v_progresso_detalhado
+ * Query direta sem usar views
  */
 export async function getProgressoDetalhado(inscricaoId: string): Promise<ProgressoDetalhado | null> {
   return withClient(async (client) => {
     const result = await client.query<ProgressoDetalhado>(
-      `SELECT * FROM progress_service.v_progresso_detalhado WHERE inscricao_id = $1`,
+      `
+      SELECT 
+        i.id as inscricao_id,
+        i.funcionario_id,
+        i.curso_id,
+        i.status,
+        i.progresso_percentual,
+        i.data_inscricao,
+        i.data_inicio,
+        i.data_conclusao,
+        c.titulo as curso_titulo,
+        -- Estatísticas gerais
+        COUNT(DISTINCT m.id) as total_modulos,
+        COUNT(DISTINCT pm.modulo_id) FILTER (WHERE pm.data_conclusao IS NOT NULL) as modulos_concluidos,
+        COUNT(DISTINCT m.id) FILTER (WHERE m.obrigatorio = true) as modulos_obrigatorios,
+        COUNT(DISTINCT pm.modulo_id) FILTER (WHERE pm.data_conclusao IS NOT NULL AND m.obrigatorio = true) as modulos_obrigatorios_concluidos,
+        -- Tempo total gasto (em segundos)
+        COALESCE(SUM(pm.tempo_gasto), 0) as tempo_total_gasto,
+        -- XP total do curso
+        COALESCE(SUM(m.xp_modulo) FILTER (WHERE pm.data_conclusao IS NOT NULL), 0) as xp_conquistado,
+        COALESCE(SUM(m.xp_modulo), 0) as xp_total_curso
+      FROM progress_service.inscricoes i
+      LEFT JOIN course_service.cursos c ON c.codigo = i.curso_id
+      JOIN course_service.modulos m ON m.curso_id = i.curso_id
+      LEFT JOIN progress_service.progresso_modulos pm ON pm.inscricao_id = i.id AND pm.modulo_id = m.id
+      WHERE i.id = $1
+      GROUP BY 
+        i.id,
+        i.funcionario_id,
+        i.curso_id,
+        i.status,
+        i.progresso_percentual,
+        i.data_inscricao,
+        i.data_inicio,
+        i.data_conclusao,
+        c.titulo
+      `,
       [inscricaoId]
     );
     

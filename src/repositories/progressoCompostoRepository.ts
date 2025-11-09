@@ -24,7 +24,7 @@ export async function getProgressoDetalhado(inscricaoId: string): Promise<Progre
         COUNT(DISTINCT pm.modulo_id) FILTER (WHERE pm.data_conclusao IS NOT NULL) as modulos_concluidos,
         COUNT(DISTINCT m.id) FILTER (WHERE m.obrigatorio = true) as modulos_obrigatorios,
         COUNT(DISTINCT pm.modulo_id) FILTER (WHERE pm.data_conclusao IS NOT NULL AND m.obrigatorio = true) as modulos_obrigatorios_concluidos,
-        -- Tempo total gasto (em segundos)
+        -- Tempo total gasto (em minutos)
         COALESCE(SUM(pm.tempo_gasto), 0) as tempo_total_gasto,
         -- XP total do curso
         COALESCE(SUM(m.xp_modulo) FILTER (WHERE pm.data_conclusao IS NOT NULL), 0) as xp_conquistado,
@@ -189,7 +189,9 @@ export async function listarModulosComProgresso(
   xp_modulo: number;
   concluido: boolean;
   liberado: boolean;
+  data_inicio?: string;
   data_conclusao?: string;
+  tempo_gasto?: number;
   tem_avaliacao: boolean;
   total_materiais: number;
 }>> {
@@ -204,9 +206,13 @@ export async function listarModulosComProgresso(
         m.obrigatorio,
         m.xp_modulo,
         
-        -- Status de conclusão
+        -- Status de conclusão e início
         CASE WHEN pm.data_conclusao IS NOT NULL THEN true ELSE false END as concluido,
+        pm.data_inicio,
         pm.data_conclusao,
+        
+        -- Tempo gasto (em minutos)
+        pm.tempo_gasto,
         
         -- Verificar se está liberado
         progress_service.modulo_esta_liberado($1, m.id) as liberado,
@@ -227,7 +233,7 @@ export async function listarModulosComProgresso(
       
       GROUP BY 
         m.id, m.titulo, m.ordem, m.tipo_conteudo, m.obrigatorio, m.xp_modulo,
-        pm.data_conclusao, av.codigo
+        pm.data_inicio, pm.data_conclusao, pm.tempo_gasto, av.codigo
       
       ORDER BY m.ordem ASC
       `,

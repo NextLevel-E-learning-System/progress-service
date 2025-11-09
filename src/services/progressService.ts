@@ -1,4 +1,5 @@
-import { insertInscricao, findInscricao, updateProgresso, completeModuleDb, CompleteResult, listInscricoesByUser, findActiveInscricaoByUserCourse, startModule, completeModuleNew, checkCoursePrerequisites, listModuleProgress } from '../repositories/progressRepository.js';
+import { insertInscricao, findInscricao, updateProgresso, completeModuleDb, CompleteResult, listInscricoesByUser, findActiveInscricaoByUserCourse, completeModuleNew, checkCoursePrerequisites, listModuleProgress } from '../repositories/progressRepository.js';
+import { marcarConteudoVisualizado, verificarModuloLiberado } from '../repositories/progressoCompostoRepository.js';
 import { createInscricaoSchema } from '../validation/progressSchemas.js';
 import { z } from 'zod';
 type CreateInscricaoInput = z.infer<typeof createInscricaoSchema>;
@@ -122,17 +123,30 @@ export async function listCourseEnrollmentsService(cursoId: string) {
 }
 
 export async function startModuleService(inscricaoId: string, moduloId: string) {
-	const result = await startModule(inscricaoId, moduloId);
+	// Verificar se módulo está liberado
+	const liberado = await verificarModuloLiberado(inscricaoId, moduloId);
+	if (!liberado) {
+		return { erro: 'modulo_bloqueado', mensagem: 'Módulo não está liberado. Complete o módulo anterior primeiro.' };
+	}
+	
+	// Marcar conteúdo como visualizado (cria registro se não existir)
+	await marcarConteudoVisualizado(inscricaoId, moduloId);
+	
+	// Buscar o registro criado para retornar
+	const { withClient } = await import('../db.js');
+	const result = await withClient(async (client) => {
+		const query = await client.query(
+			`SELECT * FROM progress_service.progresso_modulos 
+			 WHERE inscricao_id = $1 AND modulo_id = $2`,
+			[inscricaoId, moduloId]
+		);
+		return query.rows[0];
+	});
+	
 	if (!result) {
-		return { erro: 'inscricao_nao_encontrada', mensagem: 'Inscrição não encontrada' };
+		return { erro: 'erro_interno', mensagem: 'Erro ao iniciar módulo' };
 	}
-	if (typeof result === 'object' && 'erro' in result) {
-		const errorMap = {
-			inscricao_nao_ativa: 'Inscrição não está ativa',
-			modulo_ja_iniciado: 'Módulo já foi iniciado anteriormente'
-		};
-		return { erro: result.erro, mensagem: errorMap[result.erro as keyof typeof errorMap] || 'Erro desconhecido' };
-	}
+	
 	return { progresso_modulo: result, mensagem: 'Módulo iniciado com sucesso' };
 }
 

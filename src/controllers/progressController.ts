@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { createInscricaoSchema, updateProgressoSchema } from '../validation/progressSchemas.js';
-import { createInscricao, getInscricao, patchProgresso, completeModule, listInscricoesUsuario, startModuleService, completeModuleService, listModuleProgressService, listCourseEnrollmentsService } from '../services/progressService.js';
+import { createInscricao, getInscricao, patchProgresso, listInscricoesUsuario, completeModuleService, listModuleProgressService, listCourseEnrollmentsService, startModuleService } from '../services/progressService.js';
 
 export async function createInscricaoHandler(req:Request,res:Response,next:NextFunction){ 
   const parsed=createInscricaoSchema.safeParse(req.body); 
@@ -64,6 +64,7 @@ export async function listInscricoesUsuarioHandler(req:Request,res:Response,next
   }
 }
 
+
 export async function startModuleHandler(req:Request,res:Response,next:NextFunction){
   try {
     const { inscricaoId, moduloId } = req.params;
@@ -92,7 +93,7 @@ export async function completeModuleNewHandler(req:Request,res:Response,next:Nex
     
     const r = await completeModuleService(inscricaoId, moduloId);
     
-    if('erro' in r){
+    if(r && 'erro' in r){
       const statusMap = {
         'progresso_nao_encontrado': 404,
         'modulo_ja_concluido': 409

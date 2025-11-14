@@ -1,11 +1,10 @@
 import { insertInscricao, findInscricao, updateProgresso, completeModuleDb, CompleteResult, listInscricoesByUser, findActiveInscricaoByUserCourse, completeModuleNew, checkCoursePrerequisites, listModuleProgress } from '../repositories/progressRepository.js';
-import { marcarConteudoVisualizado, verificarModuloLiberado } from '../repositories/progressoCompostoRepository.js';
 import { createInscricaoSchema } from '../validation/progressSchemas.js';
 import { z } from 'zod';
 type CreateInscricaoInput = z.infer<typeof createInscricaoSchema>;
 import { publishEvent } from '../events/publisher.js';
 import { ModuleCompletedPayload, CourseCompletedPayload, CertificateIssuedPayload } from '../events/contracts.js';
-import { issueCertificate } from '../repositories/certificateRepository.js';
+import { ensureCertificateForEnrollment } from './certificateService.js';
 
 export async function createInscricao(d:CreateInscricaoInput){ 
 	// Verifica duplicidade de inscrição ativa
@@ -122,16 +121,8 @@ export async function listCourseEnrollmentsService(cursoId: string) {
 	});
 }
 
+
 export async function startModuleService(inscricaoId: string, moduloId: string) {
-	// Verificar se módulo está liberado
-	const liberado = await verificarModuloLiberado(inscricaoId, moduloId);
-	if (!liberado) {
-		return { erro: 'modulo_bloqueado', mensagem: 'Módulo não está liberado. Complete o módulo anterior primeiro.' };
-	}
-	
-	// Marcar conteúdo como visualizado (cria registro se não existir)
-	await marcarConteudoVisualizado(inscricaoId, moduloId);
-	
 	// Buscar o registro criado para retornar
 	const { withClient } = await import('../db.js');
 	const result = await withClient(async (client) => {
@@ -187,7 +178,14 @@ export async function completeModuleService(inscricaoId: string, moduloId: strin
 		// Emissão automática de certificado
 		try {
 			console.log(`📜 Iniciando emissão de certificado para inscricao=${result.inscricao_id}...`);
-			const cert = await issueCertificate(result.inscricao_id, result.funcionario_id, result.curso_id);
+			const certResult = await ensureCertificateForEnrollment(result.inscricao_id);
+			
+			if ('erro' in certResult) {
+				console.error(`❌ Erro ao emitir certificado: ${certResult.mensagem}`);
+				return;
+			}
+			
+			const cert = certResult.certificado;
 			console.log(`✅ Certificado ${cert.codigo_certificado} emitido com sucesso!`);
 			
 			const certEvt: CertificateIssuedPayload = {
@@ -223,7 +221,14 @@ async function emitCourseCompleted(r: CompleteResult){
 	// Emissão automática de certificado
 	try {
 		console.log(`📜 [emitCourseCompleted] Iniciando emissão de certificado para inscricao=${r.inscricao_id}...`);
-		const cert = await issueCertificate(r.inscricao_id, r.funcionario_id, r.curso_id);
+		const certResult = await ensureCertificateForEnrollment(r.inscricao_id);
+		
+		if ('erro' in certResult) {
+			console.error(`❌ [emitCourseCompleted] Erro ao emitir certificado: ${certResult.mensagem}`);
+			return;
+		}
+		
+		const cert = certResult.certificado;
 		console.log(`✅ [emitCourseCompleted] Certificado ${cert.codigo_certificado} emitido com sucesso!`);
 		
 		const certEvt: CertificateIssuedPayload = {

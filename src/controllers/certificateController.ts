@@ -23,44 +23,26 @@ export async function certificatePdfHandler(req:Request,res:Response){
 	const inscricao = r.inscricao;
 	
 	// Buscar dados reais do usuário, curso e instrutor
-	console.log(`📋 [certificatePdfHandler] Buscando dados para o certificado...`);
-	console.log(`   Funcionário ID: ${cert.funcionario_id}`);
-	console.log(`   Curso ID: ${cert.curso_id}`);
-	console.log(`   Data Conclusão (inscricao): ${inscricao?.data_conclusao}`);
-	
 	const usuario = await getUser(cert.funcionario_id);
-	console.log(`   👤 Usuário encontrado:`, usuario);
-	
 	const cursoResponse = await getCourse(cert.curso_id);
-	console.log(`   📚 Curso Response:`, cursoResponse);
 	
 	// O course-service retorna { curso: {...} } então precisamos acessar .curso
 	const curso = cursoResponse?.curso || cursoResponse;
-	console.log(`   📚 Curso (extraído):`, curso);
 	
 	const nomeUsuario = usuario?.nome || 'Funcionário';
 	const tituloCurso = curso?.titulo || 'Curso';
 	const cargaHoraria = curso?.duracao_estimada || undefined;
 	
-	console.log(`   ✅ Nome Usuário: ${nomeUsuario}`);
-	console.log(`   ✅ Título Curso: ${tituloCurso}`);
-	console.log(`   ✅ Carga Horária: ${cargaHoraria || 'N/A'}`);
-	
 	// Buscar nome do instrutor - primeiro tenta instrutor_nome, depois busca pelo ID
 	let nomeInstrutor = 'Instrutor NextLevel';
 	
 	if (curso?.instrutor_nome) {
-		console.log(`   👨‍🏫 Instrutor encontrado no curso: ${curso.instrutor_nome}`);
 		nomeInstrutor = curso.instrutor_nome;
 	} else if (curso?.instrutor_id) {
-		console.log(`   🎓 Buscando instrutor por ID: ${curso.instrutor_id}`);
 		const instrutor = await getUser(curso.instrutor_id);
-		console.log(`   👨‍🏫 Instrutor encontrado:`, instrutor);
 		nomeInstrutor = instrutor?.nome || nomeInstrutor;
 	}
-	console.log(`   ✅ Nome Instrutor: ${nomeInstrutor}`);
 	
-	console.log(`📄 [certificatePdfHandler] Gerando PDF com os dados...`);
 	const pdfOptions = {
 		tituloCurso,
 		nomeUsuario,
@@ -73,10 +55,8 @@ export async function certificatePdfHandler(req:Request,res:Response){
 		dataConclusao: inscricao?.data_conclusao?.toString() || cert.data_emissao.toString(),
 		localidade: 'Curitiba'
 	};
-	console.log(`   Opções do PDF:`, JSON.stringify(pdfOptions, null, 2));
 	
 	const pdf = await gerarPdfCertificado(pdfOptions);
-	console.log(`   ✅ PDF gerado! Tamanho: ${pdf.length} bytes`);
 	
 	// Gerar storage_key seguindo padrão: certificates/codigo.pdf
 	// O uploadObject vai adicionar o prefixo de ambiente automaticamente
@@ -86,33 +66,20 @@ export async function certificatePdfHandler(req:Request,res:Response){
 	if(!key){
 		// NÃO incluir o envPrefix aqui - o uploadObject adiciona automaticamente!
 		key = `certificates/${cert.codigo_certificado}.pdf`;
-		console.log(`📤 [certificatePdfHandler] Fazendo upload do certificado para S3...`);
-		console.log(`   Bucket: ${bucket}`);
-		console.log(`   Key (sem prefixo): ${key}`);
 		
 		const uploadResult = await uploadObject({ bucket, key, body: pdf, contentType: 'application/pdf' });
-		console.log(`✅ [certificatePdfHandler] Upload concluído com sucesso!`);
-		console.log(`   Key final (com prefixo): ${uploadResult.key}`);
 		
 		// Salvar a key COM o prefixo de ambiente que foi retornada pelo uploadObject
 		await withClient(c=>c.query('update progress_service.certificados set storage_key=$2 where id=$1',[cert.id, uploadResult.key]));
-		console.log(`💾 [certificatePdfHandler] storage_key salvo no banco de dados: ${uploadResult.key}`);
 		
 		// Atualizar a variável key para o presign usar a key correta
 		key = uploadResult.key;
-	} else {
-		console.log(`♻️ [certificatePdfHandler] Certificado já existe no storage: ${key}`);
 	}
 	
-	console.log(`🔐 [certificatePdfHandler] Gerando presigned URL...`);
 	const signed = await presign(bucket, key, 300);
 	
 	if (!signed) {
-		console.error(`❌ [certificatePdfHandler] Falha ao gerar presigned URL!`);
-		console.error(`   Bucket: ${bucket}`);
-		console.error(`   Key: ${key}`);
-	} else {
-		console.log(`✅ [certificatePdfHandler] Presigned URL gerado com sucesso`);
+		return res.status(500).json({ erro: 'falha_presigned_url', mensagem: 'Falha ao gerar URL de download' });
 	}
 	
 	return res.json({ downloadUrl: signed, key, codigo: cert.codigo_certificado, mensagem: 'PDF gerado com sucesso' });

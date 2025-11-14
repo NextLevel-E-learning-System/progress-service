@@ -50,16 +50,6 @@ export async function patchProgressoHandler(req:Request,res:Response,next:NextFu
   } 
 }
 
-export async function completeModuleHandler(req:Request,res:Response,next:NextFunction){
-  try { 
-  const r = await completeModule(req.params.id, req.params.moduloId); 
-  if('erro' in r) return res.status(404).json(r);
-  res.status(201).json(r);
-  } catch(e){ 
-    next(e);
-  } 
-}
-
 export async function listInscricoesUsuarioHandler(req:Request,res:Response,next:NextFunction){
   try {
     const userId = req.params.userId;

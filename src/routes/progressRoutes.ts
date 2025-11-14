@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { withClient } from '../db.js';
-import { createInscricaoHandler, patchProgressoHandler, completeModuleHandler, listInscricoesUsuarioHandler, startModuleHandler, completeModuleNewHandler, listModuleProgressHandler, listInscricoesCursoHandler } from '../controllers/progressController.js';
+import { createInscricaoHandler, patchProgressoHandler, listInscricoesUsuarioHandler, startModuleHandler, completeModuleNewHandler, listModuleProgressHandler, listInscricoesCursoHandler } from '../controllers/progressController.js';
 import { listCertificatesHandler, issueCertificateHandler, certificatePdfHandler } from '../controllers/certificateController.js';
 import { listTracksHandler, userTrackProgressHandler } from '../controllers/trackController.js';
 import {
@@ -8,7 +8,6 @@ import {
   getProximoModuloHandler,
   verificarModuloLiberadoHandler,
   marcarConteudoVisualizadoHandler,
-  marcarModuloConcluidoHandler,
   listarModulosComProgressoHandler
 } from '../controllers/progressoCompostoController.js';
 export const progressRouter = Router();
@@ -24,15 +23,13 @@ progressRouter.get('/inscricoes/:id/proximo-modulo', getProximoModuloHandler);
 progressRouter.get('/inscricoes/:id/modulos-progresso', listarModulosComProgressoHandler);
 progressRouter.get('/inscricoes/:id/modulos/:moduloId/liberado', verificarModuloLiberadoHandler);
 progressRouter.post('/inscricoes/:id/modulos/:moduloId/visualizar', marcarConteudoVisualizadoHandler);
-progressRouter.post('/inscricoes/:id/modulos/:moduloId/concluir', marcarModuloConcluidoHandler);
 
 // Novos endpoints para progresso de módulo (sistema antigo - mantido para compatibilidade)
 progressRouter.get('/inscricoes/:inscricaoId/modulos', listModuleProgressHandler);
 progressRouter.post('/inscricoes/:inscricaoId/modulos/:moduloId/iniciar', startModuleHandler);
 progressRouter.patch('/inscricoes/:inscricaoId/modulos/:moduloId/concluir', completeModuleNewHandler);
 
-// Manter endpoint antigo para compatibilidade
-progressRouter.post('/inscricoes/:id/modulos/:moduloId/concluir', completeModuleHandler);
+
 
 // Certificates - PROTEGIDO (exceto validação)
 progressRouter.get('/certificates/user/:userId', listCertificatesHandler);

@@ -7,6 +7,8 @@ import {
   marcarModuloConcluido,
   listarModulosComProgresso
 } from '../repositories/progressoCompostoRepository.js';
+import { ensureCertificateForEnrollment } from '../services/certificateService.js';
+import { findInscricao } from '../repositories/progressRepository.js';
 
 /**
  * GET /inscricoes/:id/progresso-detalhado
@@ -135,27 +137,8 @@ export async function marcarConteudoVisualizadoHandler(
 
 /**
  * POST /inscricoes/:id/modulos/:moduloId/concluir
- * Marca módulo como concluído
+ * Marca módulo como concluído e emite certificado automaticamente se o curso foi finalizado
  */
-export async function marcarModuloConcluidoHandler(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    const { id, moduloId } = req.params;
-    const { tempo_gasto } = req.body;
-    
-    await marcarModuloConcluido(id, moduloId, tempo_gasto);
-    
-    res.json({
-      success: true,
-      mensagem: 'Módulo concluído com sucesso'
-    });
-  } catch (error) {
-    next(error);
-  }
-}
 
 /**
  * GET /inscricoes/:id/modulos-progresso

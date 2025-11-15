@@ -1,4 +1,4 @@
-import { insertInscricao, findInscricao, updateProgresso, completeModuleDb, CompleteResult, listInscricoesByUser, findActiveInscricaoByUserCourse, completeModuleNew, checkCoursePrerequisites, listModuleProgress } from '../repositories/progressRepository.js';
+import { insertInscricao, findInscricao, completeModuleDb, CompleteResult, listInscricoesByUser, findActiveInscricaoByUserCourse, completeModuleNew, checkCoursePrerequisites } from '../repositories/progressRepository.js';
 import { createInscricaoSchema } from '../validation/progressSchemas.js';
 import { z } from 'zod';
 type CreateInscricaoInput = z.infer<typeof createInscricaoSchema>;
@@ -36,12 +36,6 @@ export async function getInscricao(id:string){
 	return { inscricao: i, mensagem: 'Inscrição recuperada com sucesso' }; 
 }
 
-export async function patchProgresso(id:string, valor:number){ 
-	const up = await updateProgresso(id, valor); 
-	if(!up) return { erro:'nao_encontrado', mensagem:'Inscrição não encontrada' };
-	return { inscricao: up, mensagem: 'Progresso atualizado com sucesso' }; 
-}
-
 export async function completeModule(inscricaoId:string, moduloId:string){
 	const r = await completeModuleDb(inscricaoId, moduloId);
 	if(!r) return { erro:'nao_encontrado', mensagem:'Inscrição não encontrada' };
@@ -52,11 +46,6 @@ export async function completeModule(inscricaoId:string, moduloId:string){
 export async function listInscricoesUsuario(userId:string){
 	const lista = await listInscricoesByUser(userId);
 	return lista;
-}
-
-export async function listModuleProgressService(inscricaoId: string) {
-	const progress = await listModuleProgress(inscricaoId);
-	return progress;
 }
 
 export async function listCourseEnrollmentsService(cursoId: string) {

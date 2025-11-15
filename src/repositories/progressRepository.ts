@@ -24,7 +24,6 @@ export async function findActiveInscricaoByUserCourse(funcionarioId:string, curs
 	});
 }
 
-export async function updateProgresso(id:string, valor:number){ return withClient(async c=>{ const r = await c.query('update progress_service.inscricoes set progresso_percentual=$1 where id=$2 returning id, progresso_percentual',[valor,id]); return r.rows[0]; }); }
 export async function completeModuleDb(inscricaoId:string, moduloId:string): Promise<CompleteResult | null> {
 	return withClient(async c => {
 		// recupera inscrição
@@ -173,26 +172,6 @@ export async function completeModuleNew(inscricaoId: string, moduloId: string) {
 			xp_ganho: xpModulo,
 			tempo_gasto: tempoGastoMin
 		};
-	});
-}// Lista progresso dos módulos de uma inscrição
-export async function listModuleProgress(inscricaoId: string) {
-	return withClient(async c => {
-		const result = await c.query(`
-			select 
-				id,
-				inscricao_id,
-				modulo_id,
-				data_inicio,
-				data_conclusao,
-				tempo_gasto,
-				criado_em,
-				atualizado_em
-			from progress_service.progresso_modulos 
-			where inscricao_id=$1
-			order by data_inicio asc
-		`, [inscricaoId]);
-		
-		return result.rows;
 	});
 }
 

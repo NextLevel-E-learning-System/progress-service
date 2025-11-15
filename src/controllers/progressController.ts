@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { createInscricaoSchema, updateProgressoSchema } from '../validation/progressSchemas.js';
-import { createInscricao, getInscricao, patchProgresso, listInscricoesUsuario, completeModuleService, listModuleProgressService, listCourseEnrollmentsService, startModuleService } from '../services/progressService.js';
+import { createInscricaoSchema } from '../validation/progressSchemas.js';
+import { createInscricao, getInscricao, listInscricoesUsuario, completeModuleService, listCourseEnrollmentsService, startModuleService } from '../services/progressService.js';
 
 export async function createInscricaoHandler(req:Request,res:Response,next:NextFunction){ 
   const parsed=createInscricaoSchema.safeParse(req.body); 
@@ -31,18 +31,6 @@ export async function createInscricaoHandler(req:Request,res:Response,next:NextF
 export async function getInscricaoHandler(req:Request,res:Response,next:NextFunction){ 
   try { 
   const r= await getInscricao(req.params.id); 
-  if('erro' in r) return res.status(404).json(r);
-  res.json(r);
-  } catch(e){ 
-    next(e);
-  } 
-}
-
-export async function patchProgressoHandler(req:Request,res:Response,next:NextFunction){ 
-  const parsed=updateProgressoSchema.safeParse(req.body); 
-  if(!parsed.success) return res.status(400).json({ erro:'validation_error', mensagem:'Dados inválidos', detalhes: parsed.error.issues }); 
-  try { 
-  const r= await patchProgresso(req.params.id, parsed.data.progresso_percentual); 
   if('erro' in r) return res.status(404).json(r);
   res.json(r);
   } catch(e){ 
@@ -103,16 +91,6 @@ export async function completeModuleNewHandler(req:Request,res:Response,next:Nex
     }
     
     res.status(200).json(r);
-  } catch(e){
-    next(e);
-  }
-}
-
-export async function listModuleProgressHandler(req:Request,res:Response,next:NextFunction){
-  try {
-    const { inscricaoId } = req.params;
-    const progress = await listModuleProgressService(inscricaoId);
-    res.json(progress);
   } catch(e){
     next(e);
   }

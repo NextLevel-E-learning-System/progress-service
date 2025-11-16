@@ -3,7 +3,6 @@ import { createInscricaoSchema } from '../validation/progressSchemas.js';
 import { z } from 'zod';
 type CreateInscricaoInput = z.infer<typeof createInscricaoSchema>;
 import { publishEvent } from '../config/rabbitmq.js';
-import { ModuleCompletedPayload, CourseCompletedPayload, CertificateIssuedPayload } from '../events/contracts.js';
 import { ensureCertificateForEnrollment } from './certificateService.js';
 
 export async function createInscricao(d:CreateInscricaoInput){ 
@@ -143,7 +142,7 @@ export async function completeModuleService(inscricaoId: string, moduloId: strin
 	}
 	
 	// Publica evento de módulo concluído com XP
-	const modulePayload: ModuleCompletedPayload = {
+	const modulePayload = {
 		enrollmentId: result.inscricao_id,
 		courseId: result.curso_id,
 		userId: result.funcionario_id,
@@ -156,7 +155,7 @@ export async function completeModuleService(inscricaoId: string, moduloId: strin
 	
 	// Se curso foi concluído, publica evento de curso completo
 	if (result.curso_concluido) {
-		const coursePayload: CourseCompletedPayload = {
+		const coursePayload = {
 			enrollmentId: result.inscricao_id,
 			courseId: result.curso_id,
 			userId: result.funcionario_id,
@@ -177,7 +176,7 @@ export async function completeModuleService(inscricaoId: string, moduloId: strin
 			const cert = certResult.certificado;
 			console.log(`✅ Certificado ${cert.codigo_certificado} emitido com sucesso!`);
 			
-			const certEvt: CertificateIssuedPayload = {
+			const certEvt = {
 				courseId: result.curso_id,
 				userId: result.funcionario_id,
 				certificateCode: cert.codigo_certificado,
@@ -199,7 +198,7 @@ export async function completeModuleService(inscricaoId: string, moduloId: strin
 
 async function emitCourseCompleted(r: CompleteResult){
 	if(!r.funcionario_id || !r.curso_id) return;
-	const payload: CourseCompletedPayload = {
+	const payload = {
 		enrollmentId: r.inscricao_id,
 		courseId: r.curso_id,
 		userId: r.funcionario_id,
@@ -220,7 +219,7 @@ async function emitCourseCompleted(r: CompleteResult){
 		const cert = certResult.certificado;
 		console.log(`✅ [emitCourseCompleted] Certificado ${cert.codigo_certificado} emitido com sucesso!`);
 		
-		const certEvt: CertificateIssuedPayload = {
+		const certEvt = {
 			courseId: r.curso_id,
 			userId: r.funcionario_id,
 			certificateCode: cert.codigo_certificado,

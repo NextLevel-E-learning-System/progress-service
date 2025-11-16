@@ -2,7 +2,7 @@ import { insertInscricao, findInscricao, completeModuleDb, CompleteResult, listI
 import { createInscricaoSchema } from '../validation/progressSchemas.js';
 import { z } from 'zod';
 type CreateInscricaoInput = z.infer<typeof createInscricaoSchema>;
-import { publishEvent } from '../events/publisher.js';
+import { publishEvent } from '../config/rabbitmq.js';
 import { ModuleCompletedPayload, CourseCompletedPayload, CertificateIssuedPayload } from '../events/contracts.js';
 import { ensureCertificateForEnrollment } from './certificateService.js';
 
@@ -152,7 +152,7 @@ export async function completeModuleService(inscricaoId: string, moduloId: strin
 		progressPercent: result.progresso_percentual,
 		completedCourse: result.curso_concluido
 	};
-	await publishEvent({ type: 'progress.module.completed.v1', source: 'progress-service', payload: modulePayload });
+	await publishEvent('progress.module.completed.v1', modulePayload);
 	
 	// Se curso foi concluído, publica evento de curso completo
 	if (result.curso_concluido) {
@@ -162,7 +162,7 @@ export async function completeModuleService(inscricaoId: string, moduloId: strin
 			userId: result.funcionario_id,
 			totalProgress: 100
 		};
-		await publishEvent({ type: 'progress.course.completed.v1', source: 'progress-service', payload: coursePayload });
+	await publishEvent('progress.course.completed.v1', coursePayload);
 		
 		// Emissão automática de certificado
 		try {
@@ -185,7 +185,7 @@ export async function completeModuleService(inscricaoId: string, moduloId: strin
 				storageKey: cert.storage_key || null,
 				verificationHashFragment: cert.hash_validacao.slice(0, 16)
 			};
-			await publishEvent({ type: 'certificate.issued.v1', source: 'progress-service', payload: certEvt });
+			await publishEvent('progress.certificate.issued.v1', certEvt);
 		} catch (e) {
 			console.error('❌ Erro ao emitir certificado:', e);
 		}
@@ -205,7 +205,7 @@ async function emitCourseCompleted(r: CompleteResult){
 		userId: r.funcionario_id,
 		totalProgress: 100
 	};
-	await publishEvent({ type: 'course.completed.v1', source: 'progress-service', payload });
+	await publishEvent('progress.course.completed.v1', payload);
 	
 	// Emissão automática de certificado
 	try {
@@ -228,7 +228,7 @@ async function emitCourseCompleted(r: CompleteResult){
 			storageKey: cert.storage_key || null,
 			verificationHashFragment: cert.hash_validacao.slice(0,16)
 		};
-		await publishEvent({ type: 'certificate.issued.v1', source: 'progress-service', payload: certEvt });
+	await publishEvent('progress.certificate.issued.v1', certEvt);
 		console.log(`📤 [emitCourseCompleted] Evento certificate.issued.v1 publicado para certificado ${cert.codigo_certificado}`);
 	} catch(e){ 
 		console.error('❌ [emitCourseCompleted] Erro ao emitir certificado:', e);

@@ -1,5 +1,14 @@
 import { withClient } from '../db.js';
-export interface CompleteResult { inscricao_id:string; modulo_id:string; progresso_percentual:number; concluido:boolean; data_conclusao: Date | null; funcionario_id?:string; curso_id?:string; }
+export interface CompleteResult {
+	inscricao_id: string;
+	modulo_id: string;
+	progresso_percentual: number;
+	concluido: boolean;
+	data_conclusao: Date | null;
+	funcionario_id?: string;
+	curso_id?: string;
+	curso_titulo?: string;
+}
 interface InsertInscricao { funcionario_id:string; curso_id:string; }
 
 // Insere nova inscrição (assume que duplicidade já foi checada antes)
@@ -31,6 +40,8 @@ export async function completeModuleDb(inscricaoId:string, moduloId:string): Pro
 		if(!ins.rows[0]) return null;
 		const cursoId = ins.rows[0].curso_id as string;
 		const userId = ins.rows[0].funcionario_id as string;
+		const courseResult = await c.query('select titulo from course_service.cursos where codigo=$1', [cursoId]);
+		const cursoTitulo = courseResult.rows[0]?.titulo || cursoId;
 		// upsert progresso_modulos (marca conclusão agora se não existir)
 		await c.query(`insert into progress_service.progresso_modulos (id, inscricao_id, modulo_id, data_inicio, data_conclusao, tempo_gasto)
 			values (gen_random_uuid(), $1, $2, now(), now(), null)
@@ -53,7 +64,16 @@ export async function completeModuleDb(inscricaoId:string, moduloId:string): Pro
 		} else {
 			await c.query('update progress_service.inscricoes set progresso_percentual=$1 where id=$2',[progresso,inscricaoId]);
 		}
-		return { inscricao_id: inscricaoId, modulo_id: moduloId, progresso_percentual: progresso, concluido: progresso===100, data_conclusao: dataConclusao, funcionario_id: userId, curso_id: cursoId };
+			return {
+				inscricao_id: inscricaoId,
+				modulo_id: moduloId,
+				progresso_percentual: progresso,
+				concluido: progresso===100,
+				data_conclusao: dataConclusao,
+				funcionario_id: userId,
+				curso_id: cursoId,
+				curso_titulo: cursoTitulo
+			};
 	});
 }
 export async function listInscricoesByUser(userId:string){
@@ -105,18 +125,20 @@ export async function startModule(inscricaoId: string, moduloId: string) {
 export async function completeModuleNew(inscricaoId: string, moduloId: string) {
 	return withClient(async c => {
 		// Verifica se módulo foi iniciado
-		const progressoModulo = await c.query(`
-			select pm.*, i.curso_id, i.funcionario_id 
-			from progress_service.progresso_modulos pm
-			join progress_service.inscricoes i on i.id = pm.inscricao_id
-			where pm.inscricao_id=$1 and pm.modulo_id=$2
-		`, [inscricaoId, moduloId]);
+			const progressoModulo = await c.query(`
+				select pm.*, i.curso_id, i.funcionario_id, c.titulo as curso_titulo
+				from progress_service.progresso_modulos pm
+				join progress_service.inscricoes i on i.id = pm.inscricao_id
+				left join course_service.cursos c on c.codigo = i.curso_id
+				where pm.inscricao_id=$1 and pm.modulo_id=$2
+			`, [inscricaoId, moduloId]);
 
 		if (!progressoModulo.rows[0]) return null;
 		if (progressoModulo.rows[0].data_conclusao) return { erro: 'modulo_ja_concluido' };
 
 		const cursoId = progressoModulo.rows[0].curso_id;
 		const funcionarioId = progressoModulo.rows[0].funcionario_id;
+		const cursoTitulo = progressoModulo.rows[0].curso_titulo || cursoId;
 
 		// Busca XP do módulo concluído
 		const moduloInfo = await c.query(`
@@ -162,16 +184,17 @@ export async function completeModuleNew(inscricaoId: string, moduloId: string) {
 			where id=$3
 		`, [progressoPercentual, statusFinal, inscricaoId]);
 		
-		return {
-			inscricao_id: inscricaoId,
-			modulo_id: moduloId,
-			progresso_percentual: progressoPercentual,
-			curso_concluido: progressoPercentual === 100,
-			funcionario_id: funcionarioId,
-			curso_id: cursoId,
-			xp_ganho: xpModulo,
-			tempo_gasto: tempoGastoMin
-		};
+			return {
+				inscricao_id: inscricaoId,
+				modulo_id: moduloId,
+				progresso_percentual: progressoPercentual,
+				curso_concluido: progressoPercentual === 100,
+				funcionario_id: funcionarioId,
+				curso_id: cursoId,
+				curso_titulo: cursoTitulo,
+				xp_ganho: xpModulo,
+				tempo_gasto: tempoGastoMin
+			};
 	});
 }
 

@@ -142,9 +142,11 @@ export async function completeModuleService(inscricaoId: string, moduloId: strin
 	}
 	
 	// Publica evento de módulo concluído com XP
+	const courseTitle = result.curso_titulo || result.curso_id;
 	const modulePayload = {
 		enrollmentId: result.inscricao_id,
 		courseId: result.curso_id,
+		courseTitle,
 		userId: result.funcionario_id,
 		moduleId: result.modulo_id,
 		xpEarned: result.xp_ganho,
@@ -158,6 +160,7 @@ export async function completeModuleService(inscricaoId: string, moduloId: strin
 		const coursePayload = {
 			enrollmentId: result.inscricao_id,
 			courseId: result.curso_id,
+			courseTitle,
 			userId: result.funcionario_id,
 			totalProgress: 100
 		};
@@ -178,6 +181,7 @@ export async function completeModuleService(inscricaoId: string, moduloId: strin
 			
 			const certEvt = {
 				courseId: result.curso_id,
+				courseTitle,
 				userId: result.funcionario_id,
 				certificateCode: cert.codigo_certificado,
 				issuedAt: (cert.data_emissao instanceof Date ? cert.data_emissao : new Date(cert.data_emissao)).toISOString(),
@@ -198,9 +202,11 @@ export async function completeModuleService(inscricaoId: string, moduloId: strin
 
 async function emitCourseCompleted(r: CompleteResult){
 	if(!r.funcionario_id || !r.curso_id) return;
+	const courseTitle = r.curso_titulo || r.curso_id;
 	const payload = {
 		enrollmentId: r.inscricao_id,
 		courseId: r.curso_id,
+		courseTitle,
 		userId: r.funcionario_id,
 		totalProgress: 100
 	};
@@ -221,6 +227,7 @@ async function emitCourseCompleted(r: CompleteResult){
 		
 		const certEvt = {
 			courseId: r.curso_id,
+			courseTitle,
 			userId: r.funcionario_id,
 			certificateCode: cert.codigo_certificado,
 			issuedAt: (cert.data_emissao instanceof Date ? cert.data_emissao : new Date(cert.data_emissao)).toISOString(),

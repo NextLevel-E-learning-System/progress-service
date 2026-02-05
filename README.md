@@ -10,7 +10,7 @@ O **Progress Service** é um microserviço do sistema NextLevel E-learning respo
 - Criação de inscrições em cursos com verificação de pré-requisitos
 - Listagem de inscrições por usuário e por curso
 - Validação de duplicidade de inscrições ativas
-- Controle de status de inscrição (ATIVO, CONCLUIDO)
+- Controle de status de inscrição (ATIVO, CONCLUÍDO)
 
 ### Acompanhamento de Progresso
 - Inicialização de módulos de curso
